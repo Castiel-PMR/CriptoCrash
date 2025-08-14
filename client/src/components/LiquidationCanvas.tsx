@@ -43,15 +43,24 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     const canvas = canvasRef.current;
     if (!canvas) throw new Error('Canvas not available');
 
+    // Calculate size based on liquidation value (logarithmic scale for better visual balance)
+    const logValue = Math.log10(Math.max(liquidation.value, 1000));
+    const minSize = 40;
+    const maxSize = 120;
+    const size = Math.min(maxSize, minSize + (logValue - 3) * 20); // Scale from $1K to larger amounts
+
+    // Speed inversely proportional to size (bigger bags fall slower)
+    const baseVelocity = Math.max(0.5, 3 - (size - minSize) / 20);
+
     return {
       id: liquidation.id,
-      x: Math.random() * (canvas.width - 100),
-      y: -50,
-      width: Math.random() * 40 + 60,
-      height: Math.random() * 20 + 30,
-      velocity: Math.random() * 2 + 1,
+      x: Math.random() * (canvas.width - size),
+      y: -size,
+      width: size,
+      height: size * 0.8, // Money bag proportions
+      velocity: baseVelocity,
       rotation: 0,
-      rotationSpeed: (Math.random() - 0.5) * 0.05,
+      rotationSpeed: 0, // No rotation for money bags
       coin: liquidation.symbol.replace('USDT', '').replace('USD', ''),
       isLong: liquidation.side === 'long',
       amount: liquidation.value,
@@ -62,18 +71,18 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     };
   }, []);
 
-  // Create particle for explosion
+  // Create coin particle for explosion
   const createParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
     return {
       id: Math.random().toString(),
       x,
       y,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.5) * 8 - 2,
+      vx: (Math.random() - 0.5) * 12, // Faster spread for coin explosion
+      vy: (Math.random() - 0.5) * 10 - 4, // More upward velocity
       life: 1,
-      decay: Math.random() * 0.02 + 0.01,
-      color: isLong ? '#ef4444' : '#10b981',
-      size: Math.random() * 4 + 2,
+      decay: Math.random() * 0.015 + 0.008, // Longer lasting coins
+      color: '#ffd700', // Gold color for coins
+      size: Math.random() * 6 + 4, // Slightly bigger coins
     };
   }, []);
 
@@ -98,9 +107,10 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       block.isExploding = true;
       block.explosionTime = 0;
 
-      // Create particles
+      // Create coin particles (more particles for bigger bags)
       const state = animationStateRef.current;
-      for (let i = 0; i < 15; i++) {
+      const particleCount = Math.min(30, Math.floor(block.width / 3)); // More coins for bigger bags
+      for (let i = 0; i < particleCount; i++) {
         state.particles.push(createParticle(
           block.x + block.width / 2,
           block.y + block.height / 2,
@@ -124,61 +134,108 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     return particle.life > 0;
   }, []);
 
-  // Draw liquidation block
+  // Draw money bag
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
     ctx.save();
     ctx.globalAlpha = block.opacity;
     ctx.translate(block.x + block.width / 2, block.y + block.height / 2);
-    ctx.rotate(block.rotation);
 
-    // Block background
-    const gradient = ctx.createLinearGradient(-block.width/2, -block.height/2, block.width/2, block.height/2);
+    // Money bag shape
+    const bagWidth = block.width;
+    const bagHeight = block.height;
+    const neckHeight = bagHeight * 0.15;
+    
+    // Main bag body (rounded rectangle)
+    ctx.beginPath();
+    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.1);
+    
+    // Gradient fill
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bagWidth/2);
     if (block.isLong) {
-      gradient.addColorStop(0, '#ef4444');
-      gradient.addColorStop(1, '#dc2626');
+      gradient.addColorStop(0, '#8B4513'); // Brown for long liquidations
+      gradient.addColorStop(0.7, '#654321');
+      gradient.addColorStop(1, '#3C2415');
       ctx.shadowColor = '#ef4444';
     } else {
-      gradient.addColorStop(0, '#10b981');
-      gradient.addColorStop(1, '#059669');
+      gradient.addColorStop(0, '#228B22'); // Green for short liquidations
+      gradient.addColorStop(0.7, '#1F5F1F');
+      gradient.addColorStop(1, '#0D2B0D');
       ctx.shadowColor = '#10b981';
     }
-
-    ctx.shadowBlur = 15;
+    
+    ctx.shadowBlur = 8;
     ctx.fillStyle = gradient;
-    ctx.fillRect(-block.width/2, -block.height/2, block.width, block.height);
-
-    // Border
-    ctx.strokeStyle = block.isLong ? '#fee2e2' : '#d1fae5';
+    ctx.fill();
+    
+    // Bag neck/tie
+    ctx.beginPath();
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.3, neckHeight, 0, 0, Math.PI * 2);
+    ctx.fillStyle = block.isLong ? '#654321' : '#1F5F1F';
+    ctx.fill();
+    
+    // Rope/string on neck
+    ctx.strokeStyle = '#8B4513';
     ctx.lineWidth = 2;
-    ctx.strokeRect(-block.width/2, -block.height/2, block.width, block.height);
+    ctx.beginPath();
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.32, neckHeight * 1.1, 0, 0, Math.PI * 2);
+    ctx.stroke();
 
-    // Text
+    // Dollar sign on bag
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px JetBrains Mono, monospace';
+    ctx.fillStyle = '#FFD700'; // Gold color
+    ctx.font = `bold ${Math.max(12, bagWidth * 0.2)}px JetBrains Mono, monospace`;
     ctx.textAlign = 'center';
+    ctx.fillText('$', 0, bagHeight * 0.1);
+
+    // Amount text below dollar sign
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = `${Math.max(8, bagWidth * 0.12)}px JetBrains Mono, monospace`;
+    let formattedAmount;
+    if (block.amount >= 1000000) {
+      formattedAmount = (block.amount / 1000000).toFixed(1) + 'M';
+    } else if (block.amount >= 1000) {
+      formattedAmount = (block.amount / 1000).toFixed(0) + 'K';
+    } else {
+      formattedAmount = block.amount.toFixed(0);
+    }
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
 
     // Coin symbol
-    ctx.fillText(block.coin, 0, -8);
-
-    // Amount
-    ctx.font = '10px JetBrains Mono, monospace';
-    const formattedAmount = '$' + (block.amount / 1000000).toFixed(1) + 'M';
-    ctx.fillText(formattedAmount, 0, 6);
+    ctx.fillStyle = '#FFD700';
+    ctx.font = `${Math.max(6, bagWidth * 0.08)}px JetBrains Mono, monospace`;
+    ctx.fillText(block.coin, 0, -bagHeight * 0.15);
 
     ctx.restore();
   }, []);
 
-  // Draw particle
+  // Draw coin particle
   const drawParticle = useCallback((ctx: CanvasRenderingContext2D, particle: Particle) => {
     ctx.save();
     ctx.globalAlpha = particle.life;
-    ctx.fillStyle = particle.color;
-    ctx.shadowColor = particle.color;
-    ctx.shadowBlur = 10;
+    
+    // Draw coin shape
+    ctx.fillStyle = '#FFD700'; // Gold color
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 5;
     ctx.beginPath();
     ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
     ctx.fill();
+    
+    // Coin border
+    ctx.strokeStyle = '#FFA500';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    
+    // Dollar sign on coin (for larger coins)
+    if (particle.size > 3) {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#B8860B'; // Darker gold
+      ctx.font = `bold ${particle.size}px JetBrains Mono, monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('$', particle.x, particle.y);
+    }
+    
     ctx.restore();
   }, []);
 

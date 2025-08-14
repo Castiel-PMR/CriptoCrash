@@ -10,6 +10,7 @@ export default function LiquidationDashboard() {
   const [animationSpeed, setAnimationSpeed] = useState(1);
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
   
   const { 
     liquidations, 
@@ -18,6 +19,9 @@ export default function LiquidationDashboard() {
     connectionError,
     reconnect 
   } = useLiquidationData();
+
+  // Filter liquidations based on minimum amount
+  const filteredLiquidations = liquidations.filter(liq => liq.value >= minLiquidationAmount);
 
   const handleTogglePause = () => {
     setIsPaused(!isPaused);
@@ -43,14 +47,81 @@ export default function LiquidationDashboard() {
       {/* Main Canvas Container */}
       <div className="relative w-full h-screen pt-20">
         <LiquidationCanvas 
-          liquidations={liquidations}
+          liquidations={filteredLiquidations}
           animationSpeed={animationSpeed}
           isPaused={isPaused}
         />
         
         {/* Side Stats Panels */}
         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 space-y-4">
-          <LiveStatsPanel recentLiquidations={liquidations} />
+          <LiveStatsPanel recentLiquidations={filteredLiquidations} />
+          
+          {/* Liquidation Filter Panel */}
+          <div className="bg-cyber-gray/90 backdrop-blur-md rounded-lg border border-cyber-border p-4 w-64">
+            <h3 className="text-lg font-semibold mb-3 text-accent-yellow">Liquidation Filter</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm text-gray-400 mb-2">
+                  Minimum Amount: ${minLiquidationAmount >= 1000000 
+                    ? (minLiquidationAmount / 1000000).toFixed(1) + 'M' 
+                    : minLiquidationAmount >= 1000 
+                    ? (minLiquidationAmount / 1000).toFixed(0) + 'K'
+                    : minLiquidationAmount.toFixed(0)
+                  }
+                </label>
+                <input
+                  type="range"
+                  min="1000"
+                  max="10000000"
+                  step="1000"
+                  value={minLiquidationAmount}
+                  onChange={(e) => setMinLiquidationAmount(parseInt(e.target.value))}
+                  className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>$1K</span>
+                  <span>$10M</span>
+                </div>
+              </div>
+              
+              <div className="text-xs text-gray-400">
+                Showing: {filteredLiquidations.length} of {liquidations.length} liquidations
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <button 
+                  onClick={() => setMinLiquidationAmount(10000)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 10000 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $10K
+                </button>
+                <button 
+                  onClick={() => setMinLiquidationAmount(100000)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 100000 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $100K
+                </button>
+                <button 
+                  onClick={() => setMinLiquidationAmount(1000000)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 1000000 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $1M
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
         
         <div className="absolute right-4 top-1/2 transform -translate-y-1/2 space-y-4">
@@ -113,6 +184,26 @@ export default function LiquidationDashboard() {
                   className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Minimum Liquidation: ${minLiquidationAmount >= 1000000 
+                    ? (minLiquidationAmount / 1000000).toFixed(1) + 'M' 
+                    : minLiquidationAmount >= 1000 
+                    ? (minLiquidationAmount / 1000).toFixed(0) + 'K'
+                    : minLiquidationAmount.toFixed(0)
+                  }
+                </label>
+                <input
+                  type="range"
+                  min="1000"
+                  max="10000000"
+                  step="1000"
+                  value={minLiquidationAmount}
+                  onChange={(e) => setMinLiquidationAmount(parseInt(e.target.value))}
+                  className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
+                />
+              </div>
               
               <div className="flex items-center space-x-2">
                 <input
@@ -130,8 +221,14 @@ export default function LiquidationDashboard() {
               <div className="pt-4 border-t border-cyber-border">
                 <div className="text-sm text-gray-400">
                   <p><strong>Connection Status:</strong> {isConnected ? 'Connected' : 'Disconnected'}</p>
-                  <p><strong>Active Liquidations:</strong> {liquidations.length}</p>
+                  <p><strong>Active Liquidations:</strong> {filteredLiquidations.length} / {liquidations.length}</p>
                   <p><strong>Total Volume:</strong> ${((marketStats.totalLongs + marketStats.totalShorts) / 1000000).toFixed(1)}M</p>
+                  <p><strong>Filter:</strong> Above ${minLiquidationAmount >= 1000000 
+                    ? (minLiquidationAmount / 1000000).toFixed(1) + 'M' 
+                    : minLiquidationAmount >= 1000 
+                    ? (minLiquidationAmount / 1000).toFixed(0) + 'K'
+                    : minLiquidationAmount.toFixed(0)
+                  }</p>
                 </div>
               </div>
             </div>

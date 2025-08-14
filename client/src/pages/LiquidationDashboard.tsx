@@ -1,0 +1,152 @@
+import React, { useState } from 'react';
+import { LiquidationCanvas } from '../components/LiquidationCanvas';
+import { StatsHeader } from '../components/StatsHeader';
+import { LiveStatsPanel } from '../components/LiveStatsPanel';
+import { MarketSentiment } from '../components/MarketSentiment';
+import { useLiquidationData } from '../hooks/useLiquidationData';
+import { Pause, Play, Settings, RefreshCw } from 'lucide-react';
+
+export default function LiquidationDashboard() {
+  const [animationSpeed, setAnimationSpeed] = useState(1);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  const { 
+    liquidations, 
+    marketStats, 
+    isConnected, 
+    connectionError,
+    reconnect 
+  } = useLiquidationData();
+
+  const handleTogglePause = () => {
+    setIsPaused(!isPaused);
+  };
+
+  const handleToggleSettings = () => {
+    setShowSettings(!showSettings);
+  };
+
+  return (
+    <div className="min-h-screen bg-cyber-dark text-white font-sans overflow-hidden">
+      {/* Background Grid */}
+      <div className="fixed inset-0 grid-bg opacity-30 pointer-events-none" />
+      
+      {/* Stats Header */}
+      <StatsHeader 
+        stats={marketStats}
+        isConnected={isConnected}
+        animationSpeed={animationSpeed}
+        onSpeedChange={setAnimationSpeed}
+      />
+      
+      {/* Main Canvas Container */}
+      <div className="relative w-full h-screen pt-20">
+        <LiquidationCanvas 
+          liquidations={liquidations}
+          animationSpeed={animationSpeed}
+          isPaused={isPaused}
+        />
+        
+        {/* Side Stats Panels */}
+        <div className="absolute left-4 top-1/2 transform -translate-y-1/2 space-y-4">
+          <LiveStatsPanel recentLiquidations={liquidations} />
+        </div>
+        
+        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 space-y-4">
+          <MarketSentiment stats={marketStats} />
+        </div>
+        
+        {/* Connection Error Banner */}
+        {connectionError && (
+          <div className="absolute top-24 left-1/2 transform -translate-x-1/2 bg-long-red/90 backdrop-blur-md text-white px-4 py-2 rounded-lg border border-red-400 flex items-center space-x-2">
+            <span className="text-sm">{connectionError}</span>
+            <button 
+              onClick={reconnect}
+              className="text-white hover:text-gray-200 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {/* Floating Action Controls */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <div className="flex flex-col space-y-3">
+          <button 
+            onClick={handleTogglePause}
+            className="bg-accent-blue hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+            title={isPaused ? 'Resume' : 'Pause'}
+          >
+            {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
+          </button>
+          
+          <button 
+            onClick={handleToggleSettings}
+            className="bg-cyber-gray hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+            title="Settings"
+          >
+            <Settings className="w-6 h-6" />
+          </button>
+        </div>
+      </div>
+      
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-60 flex items-center justify-center">
+          <div className="bg-cyber-gray border border-cyber-border rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold mb-4 text-accent-blue">Settings</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Animation Speed: {animationSpeed}x
+                </label>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="5"
+                  step="0.1"
+                  value={animationSpeed}
+                  onChange={(e) => setAnimationSpeed(parseFloat(e.target.value))}
+                  className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="pauseAnimation"
+                  checked={isPaused}
+                  onChange={(e) => setIsPaused(e.target.checked)}
+                  className="w-4 h-4 text-accent-blue bg-cyber-border border-gray-600 rounded focus:ring-accent-blue"
+                />
+                <label htmlFor="pauseAnimation" className="text-sm text-gray-400">
+                  Pause Animation
+                </label>
+              </div>
+              
+              <div className="pt-4 border-t border-cyber-border">
+                <div className="text-sm text-gray-400">
+                  <p><strong>Connection Status:</strong> {isConnected ? 'Connected' : 'Disconnected'}</p>
+                  <p><strong>Active Liquidations:</strong> {liquidations.length}</p>
+                  <p><strong>Total Volume:</strong> ${((marketStats.totalLongs + marketStats.totalShorts) / 1000000).toFixed(1)}M</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="px-4 py-2 bg-accent-blue hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

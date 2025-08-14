@@ -43,14 +43,29 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     const canvas = canvasRef.current;
     if (!canvas) throw new Error('Canvas not available');
 
-    // Calculate size based on liquidation value (logarithmic scale for better visual balance)
-    const logValue = Math.log10(Math.max(liquidation.value, 1000));
-    const minSize = 40;
-    const maxSize = 120;
-    const size = Math.min(maxSize, minSize + (logValue - 3) * 20); // Scale from $1K to larger amounts
+    // Calculate size based on liquidation value (more dramatic scaling)
+    const value = liquidation.value;
+    let size;
+    
+    // More dramatic size scaling based on ranges
+    if (value < 10000) {
+      size = 80; // $1K-10K = small bags
+    } else if (value < 50000) {
+      size = 100; // $10K-50K = medium-small bags
+    } else if (value < 100000) {
+      size = 120; // $50K-100K = medium bags  
+    } else if (value < 500000) {
+      size = 150; // $100K-500K = large bags
+    } else if (value < 1000000) {
+      size = 180; // $500K-1M = very large bags
+    } else {
+      size = 220; // $1M+ = massive bags
+    }
 
-    // Speed inversely proportional to size (bigger bags fall slower)
-    const baseVelocity = Math.max(0.5, 3 - (size - minSize) / 20);
+    // Speed inversely proportional to size (bigger bags fall much slower)
+    const baseVelocity = Math.max(0.2, 2.0 - (size - 80) / 80); // Slower speed for bigger bags
+
+    console.log(`Liquidation: $${value.toFixed(0)} -> Size: ${size}px, Speed: ${baseVelocity.toFixed(2)}`);;
 
     return {
       id: liquidation.id,
@@ -97,8 +112,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       return block.explosionTime < 500;
     }
 
-    // Physics
-    block.velocity += 0.05 * animationSpeed;
+    // Physics with proper speed control
+    block.velocity += 0.02 * animationSpeed; // Reduced gravity
     block.y += block.velocity * animationSpeed;
     block.rotation += block.rotationSpeed * animationSpeed;
 
@@ -180,16 +195,22 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.32, neckHeight * 1.1, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Dollar sign on bag
+    // Text with better readability - add background/outline
     ctx.shadowBlur = 0;
-    ctx.fillStyle = '#FFD700'; // Gold color
-    ctx.font = `bold ${Math.max(12, bagWidth * 0.2)}px JetBrains Mono, monospace`;
+    
+    // Dollar sign on bag with outline for better visibility
+    const dollarFontSize = Math.max(16, bagWidth * 0.25);
+    ctx.font = `bold ${dollarFontSize}px JetBrains Mono, monospace`;
     ctx.textAlign = 'center';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeText('$', 0, bagHeight * 0.1);
+    ctx.fillStyle = '#FFD700';
     ctx.fillText('$', 0, bagHeight * 0.1);
 
-    // Amount text below dollar sign
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = `${Math.max(8, bagWidth * 0.12)}px JetBrains Mono, monospace`;
+    // Amount text with outline for better readability
+    const amountFontSize = Math.max(12, bagWidth * 0.15);
+    ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
     let formattedAmount;
     if (block.amount >= 1000000) {
       formattedAmount = (block.amount / 1000000).toFixed(1) + 'M';
@@ -198,12 +219,20 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     } else {
       formattedAmount = block.amount.toFixed(0);
     }
-    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.strokeText(formattedAmount, 0, bagHeight * 0.3);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.3);
 
-    // Coin symbol
+    // Coin symbol with outline
+    const coinFontSize = Math.max(10, bagWidth * 0.12);
+    ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
     ctx.fillStyle = '#FFD700';
-    ctx.font = `${Math.max(6, bagWidth * 0.08)}px JetBrains Mono, monospace`;
-    ctx.fillText(block.coin, 0, -bagHeight * 0.15);
+    ctx.fillText(block.coin, 0, -bagHeight * 0.1);
 
     ctx.restore();
   }, []);

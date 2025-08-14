@@ -7,7 +7,7 @@ import { useLiquidationData } from '../hooks/useLiquidationData';
 import { Pause, Play, Settings, RefreshCw } from 'lucide-react';
 
 export default function LiquidationDashboard() {
-  const [animationSpeed, setAnimationSpeed] = useState(1);
+  const [animationSpeed, setAnimationSpeed] = useState(0.5); // Slower initial speed
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum

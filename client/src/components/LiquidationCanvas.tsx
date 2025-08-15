@@ -539,7 +539,7 @@ export function LiquidationCanvas({
     }
 
     return block.y < canvas.height + block.height;
-  }, [createParticle]);
+  }, [createParticle, playLaserSound]);
 
   // Update particle
   const updateParticle = useCallback((particle: Particle, deltaTime: number): boolean => {

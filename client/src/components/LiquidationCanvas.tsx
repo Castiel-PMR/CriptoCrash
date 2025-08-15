@@ -137,19 +137,124 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     };
   }, []);
 
-  // Create special particle for clicked bags
-  const createClickParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
-    const colors = ['#FF0080', '#8000FF', '#0080FF', '#FF8000', '#80FF00']; // Bright neon colors for clicks
+  // Create special particle for clicked bags with 10 different explosion types
+  const createClickParticle = useCallback((x: number, y: number, isLong: boolean, explosionType: number): Particle => {
+    let colors, speed, size, decay, vx, vy;
+    
+    switch (explosionType) {
+      case 0: // Fireworks - яркие разноцветные искры
+        colors = ['#FF0040', '#FF4000', '#FFFF00', '#40FF00', '#0040FF', '#8000FF'];
+        speed = 25;
+        size = Math.random() * 8 + 3;
+        decay = 0.008;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed;
+        break;
+        
+      case 1: // Star burst - звездообразный взрыв
+        colors = ['#FFD700', '#FFA500', '#FF6347'];
+        speed = 15;
+        size = Math.random() * 12 + 4;
+        decay = 0.012;
+        const angle = (Math.PI * 2 / 8) * Math.floor(Math.random() * 8);
+        vx = Math.cos(angle) * speed;
+        vy = Math.sin(angle) * speed;
+        break;
+        
+      case 2: // Spiral explosion - спиральный взрыв
+        colors = ['#00FFFF', '#0080FF', '#8000FF'];
+        speed = 18;
+        size = Math.random() * 6 + 2;
+        decay = 0.015;
+        const spiralAngle = Math.random() * Math.PI * 4;
+        const radius = Math.random() * speed;
+        vx = Math.cos(spiralAngle) * radius;
+        vy = Math.sin(spiralAngle) * radius;
+        break;
+        
+      case 3: // Heart explosion - сердечки
+        colors = ['#FF1493', '#FF69B4', '#FF91A4'];
+        speed = 12;
+        size = Math.random() * 10 + 6;
+        decay = 0.01;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed - 5; // Немного вверх
+        break;
+        
+      case 4: // Lightning - молнии
+        colors = ['#FFFF00', '#FFFFFF', '#FFFF80'];
+        speed = 30;
+        size = Math.random() * 15 + 2;
+        decay = 0.025;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed;
+        break;
+        
+      case 5: // Rainbow explosion - радуга
+        colors = ['#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#0000FF', '#8000FF'];
+        speed = 16;
+        size = Math.random() * 8 + 4;
+        decay = 0.008;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed;
+        break;
+        
+      case 6: // Shockwave - ударная волна
+        colors = ['#FFFFFF', '#C0C0C0', '#808080'];
+        speed = 22;
+        size = Math.random() * 20 + 5;
+        decay = 0.02;
+        const shockAngle = Math.random() * Math.PI * 2;
+        vx = Math.cos(shockAngle) * speed;
+        vy = Math.sin(shockAngle) * speed;
+        break;
+        
+      case 7: // Flower petals - лепестки цветов
+        colors = ['#FFB6C1', '#FFC0CB', '#FF69B4', '#DA70D6'];
+        speed = 10;
+        size = Math.random() * 12 + 8;
+        decay = 0.006;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed - 3;
+        break;
+        
+      case 8: // Ice crystals - ледяные кристаллы
+        colors = ['#87CEEB', '#ADD8E6', '#B0E0E6', '#FFFFFF'];
+        speed = 14;
+        size = Math.random() * 9 + 3;
+        decay = 0.01;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed;
+        break;
+        
+      case 9: // Fire explosion - огненный взрыв
+        colors = ['#FF4500', '#FF6347', '#FF8C00', '#FFD700'];
+        speed = 20;
+        size = Math.random() * 14 + 6;
+        decay = 0.018;
+        vx = (Math.random() - 0.5) * speed;
+        vy = (Math.random() - 0.5) * speed - 8; // Огонь идет вверх
+        break;
+        
+      default:
+        colors = ['#FF0080'];
+        speed = 15;
+        size = 5;
+        decay = 0.01;
+        vx = 0;
+        vy = 0;
+    }
+    
     return {
       id: Math.random().toString(),
       x,
       y,
-      vx: (Math.random() - 0.5) * 20, // Very fast radial spread
-      vy: (Math.random() - 0.5) * 20, // Equal up/down spread for click effect
+      vx,
+      vy,
       life: 1,
-      decay: Math.random() * 0.02 + 0.01, // Medium lasting
+      decay,
       color: colors[Math.floor(Math.random() * colors.length)],
-      size: Math.random() * 10 + 5, // Variable sizes for dynamic effect
+      size,
     };
   }, []);
 
@@ -175,13 +280,17 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
         bag.isExploding = true;
         bag.explosionTime = 0;
         
-        // Create special click explosion particles
-        const particleCount = Math.min(40, Math.floor(bag.width / 2.5));
+        // Choose random explosion type (0-9)
+        const explosionType = Math.floor(Math.random() * 10);
+        
+        // Create special click explosion particles with random animation
+        const particleCount = Math.min(50, Math.floor(bag.width / 2));
         for (let j = 0; j < particleCount; j++) {
           state.particles.push(createClickParticle(
             bag.x + bag.width / 2,
             bag.y + bag.height / 2,
-            bag.isLong
+            bag.isLong,
+            explosionType
           ));
         }
         
@@ -335,32 +444,99 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.restore();
   }, []);
 
-  // Draw coin particle
+  // Draw particle with different shapes based on color/type
   const drawParticle = useCallback((ctx: CanvasRenderingContext2D, particle: Particle) => {
     ctx.save();
     ctx.globalAlpha = particle.life;
     
-    // Draw coin shape
-    ctx.fillStyle = '#FFD700'; // Gold color
-    ctx.shadowColor = '#FFD700';
-    ctx.shadowBlur = 5;
-    ctx.beginPath();
-    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-    ctx.fill();
+    // Determine particle type by color
+    const isGoldCoin = particle.color === '#FFD700' || particle.color === '#ffd700';
     
-    // Coin border
-    ctx.strokeStyle = '#FFA500';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // Dollar sign on coin (for larger coins)
-    if (particle.size > 3) {
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = '#B8860B'; // Darker gold
-      ctx.font = `bold ${particle.size}px JetBrains Mono, monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('$', particle.x, particle.y);
+    if (isGoldCoin) {
+      // Original gold coin for floor impacts
+      ctx.fillStyle = '#FFD700';
+      ctx.shadowColor = '#FFD700';
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.strokeStyle = '#FFA500';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      
+      if (particle.size > 3) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#B8860B';
+        ctx.font = `bold ${particle.size}px JetBrains Mono, monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('$', particle.x, particle.y);
+      }
+    } else {
+      // Special effects for click explosions
+      ctx.fillStyle = particle.color;
+      ctx.shadowColor = particle.color;
+      ctx.shadowBlur = 8;
+      
+      // Different shapes for different effects
+      if (particle.color.includes('FF1493') || particle.color.includes('FF69B4')) {
+        // Heart shape for pink particles
+        const size = particle.size;
+        ctx.beginPath();
+        ctx.moveTo(particle.x, particle.y + size/4);
+        ctx.bezierCurveTo(particle.x, particle.y, particle.x - size/2, particle.y, particle.x - size/2, particle.y + size/4);
+        ctx.bezierCurveTo(particle.x - size/2, particle.y + size/2, particle.x, particle.y + size/2, particle.x, particle.y + size);
+        ctx.bezierCurveTo(particle.x, particle.y + size/2, particle.x + size/2, particle.y + size/2, particle.x + size/2, particle.y + size/4);
+        ctx.bezierCurveTo(particle.x + size/2, particle.y, particle.x, particle.y, particle.x, particle.y + size/4);
+        ctx.fill();
+      } else if (particle.color.includes('FFD700') || particle.color.includes('FFA500')) {
+        // Star shape for golden particles
+        const size = particle.size;
+        const spikes = 5;
+        const outerRadius = size;
+        const innerRadius = size * 0.5;
+        let rot = Math.PI / 2 * 3;
+        const step = Math.PI / spikes;
+        
+        ctx.beginPath();
+        ctx.moveTo(particle.x, particle.y - outerRadius);
+        for (let i = 0; i < spikes; i++) {
+          const x = particle.x + Math.cos(rot) * outerRadius;
+          const y = particle.y + Math.sin(rot) * outerRadius;
+          ctx.lineTo(x, y);
+          rot += step;
+          
+          const x2 = particle.x + Math.cos(rot) * innerRadius;
+          const y2 = particle.y + Math.sin(rot) * innerRadius;
+          ctx.lineTo(x2, y2);
+          rot += step;
+        }
+        ctx.lineTo(particle.x, particle.y - outerRadius);
+        ctx.fill();
+      } else if (particle.color.includes('FFFFFF') || particle.color.includes('C0C0C0')) {
+        // Ring shape for shockwave
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.lineWidth = Math.max(1, particle.size / 4);
+        ctx.strokeStyle = particle.color;
+        ctx.stroke();
+      } else if (particle.color.includes('87CEEB') || particle.color.includes('ADD8E6')) {
+        // Diamond shape for ice crystals
+        const size = particle.size;
+        ctx.beginPath();
+        ctx.moveTo(particle.x, particle.y - size);
+        ctx.lineTo(particle.x + size, particle.y);
+        ctx.lineTo(particle.x, particle.y + size);
+        ctx.lineTo(particle.x - size, particle.y);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // Default circle for other effects
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     
     ctx.restore();

@@ -11,7 +11,7 @@ export default function LiquidationDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
 
-  const [chartOpacity, setChartOpacity] = useState(50); // Opacity in percentage
+  const [chartOpacity, setChartOpacity] = useState(100); // Opacity in percentage
   
   const { 
     liquidations, 

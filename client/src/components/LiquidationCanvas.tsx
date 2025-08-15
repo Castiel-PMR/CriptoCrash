@@ -15,7 +15,7 @@ interface ExtendedAnimationState extends AnimationState {
 export function LiquidationCanvas({ 
   liquidations, 
   isPaused, 
-  chartOpacity = 50 
+  chartOpacity = 100 
 }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStateRef = useRef<ExtendedAnimationState>({
@@ -639,8 +639,8 @@ export function LiquidationCanvas({
     
     fetchBitcoinData();
     
-    // Update every 30 seconds for real-time feel
-    const interval = setInterval(fetchBitcoinData, 30 * 1000);
+    // Update every 1 second for real-time feel
+    const interval = setInterval(fetchBitcoinData, 1 * 1000);
     return () => clearInterval(interval);
   }, [timeframe]);
 

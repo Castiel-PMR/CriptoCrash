@@ -432,8 +432,11 @@ export function LiquidationCanvas({
       const state = animationStateRef.current;
       const leftCannon = state.leftCannon;
       
-      // Random chance to fire at any point within the range
-      const shouldFire = Math.random() < 0.005; // 0.5% chance per frame to fire at bags in range (much more random timing)
+      // Progressive firing probability - higher chance closer to bottom
+      const bagProgress = (block.y + block.height - cannonRange) / (bottomLimit - cannonRange);
+      const baseProbability = 0.0005; // Very low base chance
+      const progressMultiplier = 1 + bagProgress * 4; // Up to 5x higher chance near bottom
+      const shouldFire = Math.random() < (baseProbability * progressMultiplier);
       
       // Fire left cannon only if it's not currently firing and random chance succeeds
       if (!leftCannon.isFiring && shouldFire) {

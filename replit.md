@@ -18,6 +18,15 @@ CryptoLiquidations is a real-time cryptocurrency liquidation monitoring applicat
 - **Grid toggle functionality** accessible through Settings modal
 - **Professional monochrome chart styling** with hollow/filled candlesticks for clear background appearance
 
+### Money Bag Visual Design - STABLE VERSION (August 15, 2025)
+- **Finalized money bag design** - simple rounded rectangle bags with classic gradient styling
+- **Brown bags for long liquidations, green bags for short liquidations** with radial gradient shading
+- **Text formatting optimized** - removed dollar sign for better readability, shows only coin symbol (BTC, ETH) and amount
+- **Enhanced text size and positioning** - coin symbol at 22% of bag width, amount at 20% of bag width
+- **Clean typography** - JetBrains Mono font with black outline and white/gold fill for maximum readability
+- **Proper text positioning** - all text stays within bag boundaries, no overflow
+- **Simple rope tie detail** with brown color and elliptical neck design
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

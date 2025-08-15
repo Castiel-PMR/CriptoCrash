@@ -744,37 +744,63 @@ export function LiquidationCanvas({
       ctx.scale(-1, 1);
     }
     
-    // Cannon base/carriage (wood)
-    ctx.fillStyle = '#8B4513'; // Brown wood
+    // Modern cyber base platform with gradient
+    const baseGradient = ctx.createLinearGradient(-30, -10, 30, 10);
+    baseGradient.addColorStop(0, '#1e3a8a'); // Deep blue
+    baseGradient.addColorStop(0.5, '#3b82f6'); // Bright blue
+    baseGradient.addColorStop(1, '#1e40af'); // Blue
+    
+    ctx.fillStyle = baseGradient;
+    ctx.shadowColor = '#3b82f6';
+    ctx.shadowBlur = 8;
     ctx.fillRect(-30, -10, 60, 20);
     
-    // Cannon wheels
-    ctx.fillStyle = '#654321'; // Dark brown
-    ctx.beginPath();
-    ctx.arc(-20, 10, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(20, 10, 12, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Wheel spokes
-    ctx.strokeStyle = '#8B4513';
+    // Glowing border
+    ctx.strokeStyle = '#60a5fa';
     ctx.lineWidth = 2;
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      ctx.beginPath();
-      ctx.moveTo(-20, 10);
-      ctx.lineTo(-20 + Math.cos(angle) * 8, 10 + Math.sin(angle) * 8);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(20, 10);
-      ctx.lineTo(20 + Math.cos(angle) * 8, 10 + Math.sin(angle) * 8);
-      ctx.stroke();
-    }
+    ctx.strokeRect(-30, -10, 60, 20);
+    ctx.shadowBlur = 0;
     
-    // Cannon barrel (bronze/brass color)
-    ctx.fillStyle = '#CD7F32'; // Bronze
-    const barrelLength = 50;
+    // Futuristic hover discs instead of wheels
+    const discGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
+    discGradient.addColorStop(0, '#06b6d4'); // Cyan center
+    discGradient.addColorStop(0.7, '#0891b2'); // Darker cyan
+    discGradient.addColorStop(1, '#164e63'); // Dark edge
+    
+    // Left hover disc
+    ctx.save();
+    ctx.translate(-20, 10);
+    ctx.fillStyle = discGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner ring effect
+    ctx.strokeStyle = '#67e8f9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    // Right hover disc
+    ctx.save();
+    ctx.translate(20, 10);
+    ctx.fillStyle = discGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Inner ring effect
+    ctx.strokeStyle = '#67e8f9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    
+    // Sleek cyber barrel
+    const barrelLength = 60;
     let barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 6; // Default elevation
     
     // Adjust angle for mirrored right cannon
@@ -784,26 +810,44 @@ export function LiquidationCanvas({
     
     ctx.save();
     ctx.rotate(barrelAngle);
+    
+    const barrelGradient = ctx.createLinearGradient(0, -8, 0, 8);
+    barrelGradient.addColorStop(0, '#6366f1'); // Purple
+    barrelGradient.addColorStop(0.5, '#8b5cf6'); // Light purple
+    barrelGradient.addColorStop(1, '#5b21b6'); // Dark purple
+    
+    ctx.fillStyle = barrelGradient;
     ctx.fillRect(0, -8, barrelLength, 16);
     
-    // Barrel rings (decorative)
-    ctx.fillStyle = '#B8860B'; // Dark goldenrod
-    for (let i = 10; i < barrelLength; i += 12) {
-      ctx.fillRect(i, -9, 3, 18);
+    // Glowing barrel outline
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, -8, barrelLength, 16);
+    
+    // Energy lines along barrel
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 1;
+    for (let i = 10; i < barrelLength; i += 15) {
+      ctx.beginPath();
+      ctx.moveTo(i, -6);
+      ctx.lineTo(i + 6, -2);
+      ctx.lineTo(i + 6, 2);
+      ctx.lineTo(i, 6);
+      ctx.stroke();
     }
     
-    // Muzzle
-    ctx.fillStyle = '#2F4F4F'; // Dark slate gray
-    ctx.fillRect(barrelLength - 2, -6, 4, 12);
-    
-    // Fire effect when firing
+    // Plasma muzzle flash when firing
     if (cannon.isFiring && cannon.fireProgress < 0.3) {
-      ctx.fillStyle = '#FF4500'; // Orange fire
-      ctx.globalAlpha = 1 - cannon.fireProgress * 3;
-      ctx.fillRect(barrelLength, -15, 30, 30);
+      const flashGradient = ctx.createRadialGradient(barrelLength + 10, 0, 0, barrelLength + 10, 0, 25);
+      flashGradient.addColorStop(0, '#fbbf24'); // Yellow center
+      flashGradient.addColorStop(0.5, '#f59e0b'); // Orange
+      flashGradient.addColorStop(1, '#dc2626'); // Red edge
       
-      ctx.fillStyle = '#FFD700'; // Golden center
-      ctx.fillRect(barrelLength, -8, 20, 16);
+      ctx.fillStyle = flashGradient;
+      ctx.globalAlpha = 1 - cannon.fireProgress * 3;
+      ctx.beginPath();
+      ctx.arc(barrelLength + 10, 0, 25, 0, Math.PI * 2);
+      ctx.fill();
       ctx.globalAlpha = 1;
     }
     
@@ -1161,23 +1205,25 @@ export function LiquidationCanvas({
           ))}
         </div>
         
-        {/* Flashing text "Click to explode bags" */}
-        {showFlashText && (
-          <div 
-            className={`
-              absolute top-0 left-full ml-4 flex items-center h-full
-              transition-opacity duration-150
-              ${isFlashing ? 'opacity-100' : 'opacity-30'}
-            `}
-          >
-            <span className="text-sm font-mono text-yellow-400 whitespace-nowrap">
+
+      </div>
+      
+      {/* Flashing text "Click to explode bags" in center */}
+      {showFlashText && (
+        <div 
+          className={`
+            absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10
+            transition-opacity duration-150
+            ${isFlashing ? 'opacity-100' : 'opacity-30'}
+          `}
+        >
+          <div className="bg-black/40 backdrop-blur-sm rounded-lg px-4 py-2 border border-yellow-400/30">
+            <span className="text-lg font-mono text-yellow-400 whitespace-nowrap">
               Click to explode bags
             </span>
           </div>
-        )}
-      </div>
-      
-
+        </div>
+      )}
 
     </div>
   );

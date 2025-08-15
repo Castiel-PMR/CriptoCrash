@@ -57,12 +57,10 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        console.log('Left arrow pressed');
         setKeys(prev => ({ ...prev, left: true }));
       }
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        console.log('Right arrow pressed');
         setKeys(prev => ({ ...prev, right: true }));
       }
     };
@@ -70,12 +68,10 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        console.log('Left arrow released');
         setKeys(prev => ({ ...prev, left: false }));
       }
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        console.log('Right arrow released');
         setKeys(prev => ({ ...prev, right: false }));
       }
     };
@@ -255,10 +251,10 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       return block.explosionTime < 500;
     }
 
-    // Physics with proper speed control
-    block.velocity += 0.02 * animationSpeed; // Reduced gravity
-    block.y += block.velocity * animationSpeed;
-    block.rotation += block.rotationSpeed * animationSpeed;
+    // Physics with constant speed (not affected by animationSpeed)
+    block.velocity += 0.02; // Constant gravity
+    block.y += block.velocity;
+    block.rotation += block.rotationSpeed;
 
     // Check collision with platform
     const state = animationStateRef.current;
@@ -308,7 +304,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     }
 
     return block.y < canvas.height + block.height;
-  }, [animationSpeed, createParticle]);
+  }, [createParticle, createCaughtParticle]);
 
   // Update particle
   const updateParticle = useCallback((particle: Particle): boolean => {
@@ -489,15 +485,13 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Update platform position based on keys
-      const platformSpeed = 8 * animationSpeed;
+      // Update platform position based on keys (constant speed, not affected by animationSpeed)
+      const platformSpeed = 8;
       if (keys.left && state.platform.x > 0) {
         state.platform.x -= platformSpeed;
-        console.log('Platform moving left:', state.platform.x);
       }
       if (keys.right && state.platform.x < canvas.width - state.platform.width) {
         state.platform.x += platformSpeed;
-        console.log('Platform moving right:', state.platform.x);
       }
 
       // Update and draw liquidations

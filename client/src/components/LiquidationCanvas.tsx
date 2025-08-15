@@ -430,14 +430,15 @@ export function LiquidationCanvas({
         const distance = Math.sqrt(dx * dx + dy * dy);
         
         if (distance < block.width / 2 + 8) { // Ball radius is 8
-          block.isExploding = true;
-          block.explosionTime = 0;
-          
           // Remove the cannonball
           state.cannonballs.splice(i, 1);
           
-          // Create explosion particles
-          const particleCount = Math.min(40, Math.floor(block.width / 2));
+          // Use same explosion as mouse click
+          block.isExploding = true;
+          block.explosionTime = 0;
+          
+          // Create particles with same count as click explosion
+          const particleCount = Math.min(50, Math.floor(block.width / 2) + 10);
           for (let j = 0; j < particleCount; j++) {
             state.particles.push(createParticle(
               block.x + block.width / 2,
@@ -792,16 +793,6 @@ export function LiquidationCanvas({
     
     ctx.restore();
     
-    // Cannon emblem (Napoleonic eagle)
-    ctx.fillStyle = '#FFD700'; // Gold
-    ctx.font = '16px serif';
-    ctx.textAlign = 'center';
-    // Don't mirror the text
-    if (cannon.side === 'right') {
-      ctx.scale(-1, 1);
-    }
-    ctx.fillText('N', 0, -15);
-    
     ctx.restore();
   }, []);
 
@@ -1060,13 +1051,7 @@ export function LiquidationCanvas({
         drawCannonball(ctx, ball);
       });
 
-      // Draw controls instructions
-      ctx.save();
-      ctx.fillStyle = '#87CEEB';
-      ctx.font = '14px JetBrains Mono, monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText('Кликните по мешочкам чтобы взорвать их', canvas.width - 20, canvas.height - 40);
-      ctx.restore();
+
     }
 
     requestAnimationFrame(animate);

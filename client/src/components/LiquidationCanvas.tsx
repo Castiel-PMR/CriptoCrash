@@ -748,7 +748,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     }
 
     requestAnimationFrame(animate);
-  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle]);
+  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

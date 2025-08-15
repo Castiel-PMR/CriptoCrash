@@ -865,17 +865,17 @@ export function LiquidationCanvas({
     ctx.save();
     ctx.translate(cannon.x, cannon.y);
     
-    // Base wooden carriage platform 
-    const woodGradient = ctx.createLinearGradient(0, 10, 0, 35);
-    woodGradient.addColorStop(0, '#8B4513');
-    woodGradient.addColorStop(0.5, '#A0522D');
-    woodGradient.addColorStop(1, '#654321');
+    // Base cyber carriage platform 
+    const cybertechGradient = ctx.createLinearGradient(0, 10, 0, 35);
+    cybertechGradient.addColorStop(0, '#2A2A3A');
+    cybertechGradient.addColorStop(0.5, '#3A3A4A');
+    cybertechGradient.addColorStop(1, '#1A1A2A');
     
-    ctx.fillStyle = woodGradient;
+    ctx.fillStyle = cybertechGradient;
     ctx.fillRect(-35, 10, 70, 25);
     
-    // Wood grain texture
-    ctx.strokeStyle = '#654321';
+    // Tech panel lines
+    ctx.strokeStyle = '#4A4A5A';
     ctx.lineWidth = 1;
     ctx.globalAlpha = 0.6;
     for (let i = 0; i < 3; i++) {
@@ -886,10 +886,10 @@ export function LiquidationCanvas({
     }
     ctx.globalAlpha = 1;
     
-    // Large wooden wheels
+    // Large cyber wheels
     const wheelGradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 15);
-    wheelGradient.addColorStop(0, '#8B4513');
-    wheelGradient.addColorStop(1, '#654321');
+    wheelGradient.addColorStop(0, '#3A3A4A');
+    wheelGradient.addColorStop(1, '#1A1A2A');
     
     // Left wheel
     ctx.fillStyle = wheelGradient;
@@ -903,7 +903,7 @@ export function LiquidationCanvas({
     ctx.fill();
     
     // Wheel spokes (8 spokes each) - with rotation
-    ctx.strokeStyle = '#4A2C17';
+    ctx.strokeStyle = '#5A5A6A';
     ctx.lineWidth = 2;
     const wheelRotation = cannon.wheelRotation || 0;
     
@@ -923,14 +923,14 @@ export function LiquidationCanvas({
       ctx.restore();
       
       // Hub
-      ctx.fillStyle = '#4A2C17';
+      ctx.fillStyle = '#5A5A6A';
       ctx.beginPath();
       ctx.arc(wheel, 35, 4, 0, Math.PI * 2);
       ctx.fill();
     }
     
     // Cannon trunnions (side mounting points)
-    ctx.fillStyle = '#B8860B';
+    ctx.fillStyle = '#6A6A7A';
     ctx.beginPath();
     ctx.arc(0, 5, 3, 0, Math.PI * 2);
     ctx.fill();
@@ -941,12 +941,12 @@ export function LiquidationCanvas({
     ctx.save();
     ctx.rotate(barrelAngle);
     
-    // Main cannon barrel (bronze/brass with historical taper)
+    // Main cannon barrel (cyber-tech styling)
     const barrelGradient = ctx.createLinearGradient(0, -10, 0, 10);
-    barrelGradient.addColorStop(0, '#CD7F32');
-    barrelGradient.addColorStop(0.3, '#DAA520');
-    barrelGradient.addColorStop(0.7, '#B8860B');
-    barrelGradient.addColorStop(1, '#8B6914');
+    barrelGradient.addColorStop(0, '#4A4A5A');
+    barrelGradient.addColorStop(0.3, '#3A3A4A');
+    barrelGradient.addColorStop(0.7, '#2A2A3A');
+    barrelGradient.addColorStop(1, '#1A1A2A');
     
     ctx.fillStyle = barrelGradient;
     
@@ -961,14 +961,14 @@ export function LiquidationCanvas({
     ctx.closePath();
     ctx.fill();
     
-    // Reinforcement bands (typical of period cannons)
-    ctx.fillStyle = '#8B6914';
+    // Reinforcement bands (cyber-tech style)
+    ctx.fillStyle = '#5A5A6A';
     ctx.fillRect(5, -10, 4, 20);
     ctx.fillRect(20, -9, 3, 18);
     ctx.fillRect(35, -8, 3, 16);
     
     // Decorative moldings
-    ctx.strokeStyle = '#654321';
+    ctx.strokeStyle = '#6A6A7A';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, -8);
@@ -980,11 +980,11 @@ export function LiquidationCanvas({
     ctx.stroke();
     
     // Muzzle end (darker, worn look)
-    ctx.fillStyle = '#654321';
+    ctx.fillStyle = '#2A2A3A';
     ctx.fillRect(47, -6, 3, 12);
     
     // Touch hole for ignition
-    ctx.fillStyle = '#2F1B14';
+    ctx.fillStyle = '#1A1A2A';
     ctx.beginPath();
     ctx.arc(-2, 0, 2, 0, Math.PI * 2);
     ctx.fill();

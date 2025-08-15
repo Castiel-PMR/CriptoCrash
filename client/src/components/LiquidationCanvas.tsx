@@ -87,9 +87,13 @@ export function LiquidationCanvas({
         // When page becomes visible, update the last visible time
         lastVisibleTime.current = Date.now();
         
-        // Keep existing animations running - don't clear them
-        // Only prevent new old liquidations from being added
-        console.log('Page visible - keeping existing animations');
+        // Don't clear processed liquidations to prevent duplicates
+        // Just clear existing animations that might have accumulated
+        const state = animationStateRef.current;
+        state.liquidations = [];
+        state.particles = [];
+        
+        console.log('Page visible - cleared accumulated liquidations');
       }
     };
 
@@ -437,15 +441,7 @@ export function LiquidationCanvas({
     // Text with better readability - add background/outline
     ctx.shadowBlur = 0;
     
-    // Dollar sign on bag with outline for better visibility
-    const dollarFontSize = Math.max(16, bagWidth * 0.25);
-    ctx.font = `bold ${dollarFontSize}px JetBrains Mono, monospace`;
-    ctx.textAlign = 'center';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.strokeText('$', 0, bagHeight * 0.1);
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText('$', 0, bagHeight * 0.1);
+    // Removed dollar sign for better coin symbol and amount readability
 
     // Amount text with outline for better readability
     const amountFontSize = Math.max(12, bagWidth * 0.15);

@@ -542,15 +542,16 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.restore();
   }, []);
 
-  // Real Bitcoin candlestick data from Binance
+  // Real Bitcoin candlestick data from Binance with animation state
   const [bitcoinCandles, setBitcoinCandles] = useState<any[]>([]);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
   
   // Fetch real Bitcoin data
   useEffect(() => {
     const fetchBitcoinData = async () => {
       try {
-        // Get 24h hourly candlestick data from Binance (free, no API key needed)
-        const response = await fetch('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24');
+        // Get 48 30-minute candles for more granular real-time updates
+        const response = await fetch('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=30m&limit=48');
         const data = await response.json();
         
         // Convert to OHLCV format
@@ -564,8 +565,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
         }));
         
         setBitcoinCandles(candles);
-        console.log('Загружены реальные данные Bitcoin:', candles.length, 'свечей');
-        console.log('Диапазон цен:', Math.min(...candles.map(c => c.low)), '-', Math.max(...candles.map(c => c.high)));
+        setLastUpdateTime(Date.now());
+        console.log('Обновлены данные Bitcoin:', candles.length, 'свечей (30m интервал)');
       } catch (error) {
         console.error('Ошибка загрузки данных Bitcoin:', error);
         // Fallback to previous static data if API fails
@@ -588,8 +589,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     
     fetchBitcoinData();
     
-    // Update every 5 minutes
-    const interval = setInterval(fetchBitcoinData, 5 * 60 * 1000);
+    // Update every 15 seconds for real-time feel
+    const interval = setInterval(fetchBitcoinData, 15 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -691,20 +692,33 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       }
     });
     
-    // Draw minimal price labels - only current price
-    ctx.globalAlpha = 0.3;
+    // Draw minimal price labels with live indicator
+    ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#666666';
     ctx.font = '9px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
     
     const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
     if (lastCandle) {
-      const margin = height * 0.1;
-      const chartHeight = height - 2 * margin;
-      const currentY = margin + ((maxPrice - lastCandle.close) / priceRange) * chartHeight;
-      
-      // Only show current Bitcoin price in corner
+      // Show current Bitcoin price
       ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, width - 10, 20);
+      
+      // Add live indicator (pulsing dot)
+      const timeSinceUpdate = Date.now() - lastUpdateTime;
+      const isRecent = timeSinceUpdate < 20000; // 20 seconds
+      if (isRecent) {
+        const alpha = 0.3 + 0.4 * Math.sin(Date.now() * 0.005); // Pulsing effect
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#00ff88';
+        ctx.beginPath();
+        ctx.arc(width - 120, 15, 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#666666';
+        ctx.textAlign = 'right';
+        ctx.fillText('LIVE', width - 130, 20);
+      }
     }
     
     ctx.restore();

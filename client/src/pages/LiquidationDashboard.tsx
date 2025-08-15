@@ -10,6 +10,7 @@ export default function LiquidationDashboard() {
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
+  const [timeframe, setTimeframe] = useState('1m'); // Default 1-minute timeframe
 
   const [chartOpacity, setChartOpacity] = useState(100); // Opacity in percentage
   
@@ -40,6 +41,8 @@ export default function LiquidationDashboard() {
       <StatsHeader 
         stats={marketStats}
         isConnected={isConnected}
+        timeframe={timeframe}
+        onTimeframeChange={setTimeframe}
       />
       
       {/* Main Layout with Sidebar */}
@@ -50,6 +53,7 @@ export default function LiquidationDashboard() {
             liquidations={filteredLiquidations}
             isPaused={isPaused}
             chartOpacity={chartOpacity}
+            timeframe={timeframe}
           />
         </div>
         

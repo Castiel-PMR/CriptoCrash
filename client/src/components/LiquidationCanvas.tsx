@@ -6,6 +6,7 @@ interface LiquidationCanvasProps {
   liquidations: Liquidation[];
   isPaused: boolean;
   chartOpacity?: number;
+  timeframe: string;
 }
 
 interface ExtendedAnimationState extends AnimationState {
@@ -18,7 +19,8 @@ interface ExtendedAnimationState extends AnimationState {
 export function LiquidationCanvas({ 
   liquidations, 
   isPaused, 
-  chartOpacity = 100 
+  chartOpacity = 100,
+  timeframe 
 }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStateRef = useRef<ExtendedAnimationState>({
@@ -1056,25 +1058,24 @@ export function LiquidationCanvas({
   // Real Bitcoin candlestick data from Binance with animation state
   const [bitcoinCandles, setBitcoinCandles] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
-  const [timeframe, setTimeframe] = useState<string>('30m');
+
   
-  // Timeframe options
-  const timeframeOptions = [
-    { value: '1m', label: '1м', limit: 60 },
-    { value: '5m', label: '5м', limit: 60 },
-    { value: '15m', label: '15м', limit: 48 },
-    { value: '30m', label: '30м', limit: 48 },
-    { value: '1h', label: '1ч', limit: 24 },
-    { value: '4h', label: '4ч', limit: 24 },
-    { value: '1d', label: '1д', limit: 30 }
-  ];
+  // Timeframe mapping for data fetching  
+  const timeframeLimits: Record<string, number> = {
+    '1m': 60,
+    '5m': 60, 
+    '15m': 48,
+    '30m': 48,
+    '1h': 24,
+    '4h': 24,
+    '1d': 30
+  };
   
   // Fetch real Bitcoin data
   useEffect(() => {
     const fetchBitcoinData = async () => {
       try {
-        const selectedTimeframe = timeframeOptions.find(tf => tf.value === timeframe);
-        const limit = selectedTimeframe?.limit || 48;
+        const limit = timeframeLimits[timeframe] || 48;
         
         // Get candlestick data based on selected timeframe
         const response = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=${timeframe}&limit=${limit}`);
@@ -1454,29 +1455,7 @@ export function LiquidationCanvas({
         style={{ outline: 'none' }}
       />
       
-      {/* Timeframe Selector */}
-      <div className="absolute top-16 right-4 z-10">
-        <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-2">
-          <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
-          {timeframeOptions.map((tf) => (
-            <button
-              key={tf.value}
-              onClick={() => setTimeframe(tf.value)}
-              className={`
-                px-2 py-1 text-xs font-mono rounded transition-all duration-200
-                ${timeframe === tf.value 
-                  ? 'bg-accent-blue text-black font-bold' 
-                  : 'text-gray-300 hover:text-white hover:bg-white/10'
-                }
-              `}
-            >
-              {tf.label}
-            </button>
-          ))}
-        </div>
-        
 
-      </div>
       
       {/* Flashing text "Click to explode bags" in center */}
       {showFlashText && (

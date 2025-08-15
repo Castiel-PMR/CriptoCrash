@@ -4,9 +4,11 @@ import { MarketStats } from '@shared/schema';
 interface StatsHeaderProps {
   stats: MarketStats;
   isConnected: boolean;
+  timeframe?: string;
+  onTimeframeChange?: (timeframe: string) => void;
 }
 
-export function StatsHeader({ stats, isConnected }: StatsHeaderProps) {
+export function StatsHeader({ stats, isConnected, timeframe, onTimeframeChange }: StatsHeaderProps) {
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
@@ -44,6 +46,36 @@ export function StatsHeader({ stats, isConnected }: StatsHeaderProps) {
                   {stats.activeLiquidations}
                 </div>
               </div>
+              
+              {/* Timeframe Selector */}
+              {timeframe && onTimeframeChange && (
+                <div className="flex items-center gap-1 ml-6">
+                  <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
+                  {[
+                    { label: '1м', value: '1m' },
+                    { label: '5м', value: '5m' },
+                    { label: '15м', value: '15m' },
+                    { label: '30м', value: '30m' },
+                    { label: '1ч', value: '1h' },
+                    { label: '4ч', value: '4h' },
+                    { label: '1д', value: '1d' }
+                  ].map((tf) => (
+                    <button
+                      key={tf.value}
+                      onClick={() => onTimeframeChange(tf.value)}
+                      className={`
+                        px-2 py-1 text-xs font-mono rounded transition-all duration-200
+                        ${timeframe === tf.value 
+                          ? 'bg-accent-blue text-black font-bold' 
+                          : 'text-gray-300 hover:text-white hover:bg-white/10'
+                        }
+                      `}
+                    >
+                      {tf.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           

@@ -29,14 +29,23 @@ export interface Particle {
   size: number;
 }
 
-export interface Robot {
+export interface Cannon {
   x: number;
   y: number;
-  targetX: number;
-  isActive: boolean;
-  isSwinging: boolean;
-  swingProgress: number;
+  angle: number;
+  isFiring: boolean;
+  fireProgress: number;
   targetBag: string | null;
+  side: 'left' | 'right';
+}
+
+export interface Cannonball {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  targetBagId: string;
+  life: number;
 }
 
 export interface AnimationState {

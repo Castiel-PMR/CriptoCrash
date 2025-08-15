@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Liquidation, Platform } from '@shared/schema';
-import { LiquidationBlock, Particle, AnimationState, Robot } from '../types/liquidation';
+import { LiquidationBlock, Particle, AnimationState, Cannon, Cannonball } from '../types/liquidation';
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
@@ -10,7 +10,9 @@ interface LiquidationCanvasProps {
 
 interface ExtendedAnimationState extends AnimationState {
   platform: Platform;
-  robot: Robot;
+  leftCannon: Cannon;
+  rightCannon: Cannon;
+  cannonballs: Cannonball[];
 }
 
 export function LiquidationCanvas({ 
@@ -33,15 +35,25 @@ export function LiquidationCanvas({
       score: 0,
       totalCaught: 0,
     },
-    robot: {
-      x: -100, // Start off-screen
+    leftCannon: {
+      x: 50,
       y: 0,
-      targetX: -100,
-      isActive: false,
-      isSwinging: false,
-      swingProgress: 0,
+      angle: 0,
+      isFiring: false,
+      fireProgress: 0,
       targetBag: null,
+      side: 'left',
     },
+    rightCannon: {
+      x: 0, // Will be set when canvas is available
+      y: 0,
+      angle: 0,
+      isFiring: false,
+      fireProgress: 0,
+      targetBag: null,
+      side: 'right',
+    },
+    cannonballs: [],
   });
 
   const processedLiquidations = useRef(new Set<string>());
@@ -369,46 +381,82 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if bag is close to bottom - activate robot
-    if (block.y + block.height >= canvas.height - 150 && !animationStateRef.current.robot.isActive) {
-      const robot = animationStateRef.current.robot;
-      if (!robot.isActive) {
-        robot.isActive = true;
-        robot.targetX = block.x + block.width / 2;
-        robot.targetBag = block.id;
-        robot.isSwinging = false;
-        robot.swingProgress = 0;
-      }
-    }
-
-    // Check if robot is swinging and hit the bag
-    const robot = animationStateRef.current.robot;
-    if (robot.isSwinging && robot.targetBag === block.id && robot.swingProgress > 0.5) {
-      block.isExploding = true;
-      block.explosionTime = 0;
-
-      // Create mining particles
-      const particleCount = Math.min(30, Math.floor(block.width / 3));
+    // Check if bag is in range for cannon firing (middle area of screen)
+    if (block.y + block.height >= canvas.height / 2 && block.y + block.height <= canvas.height - 100) {
       const state = animationStateRef.current;
-      for (let i = 0; i < particleCount; i++) {
-        state.particles.push(createParticle(
-          block.x + block.width / 2,
-          block.y + block.height / 2,
-          block.isLong
-        ));
-      }
+      const leftCannon = state.leftCannon;
+      const rightCannon = state.rightCannon;
       
-      return true;
+      // Fire cannon if neither is currently firing
+      if (!leftCannon.isFiring && !rightCannon.isFiring) {
+        const bagCenterX = block.x + block.width / 2;
+        const bagCenterY = block.y + block.height / 2;
+        
+        const leftDistance = Math.abs(bagCenterX - leftCannon.x);
+        const rightDistance = Math.abs(bagCenterX - rightCannon.x);
+        
+        const activeCannon = leftDistance < rightDistance ? leftCannon : rightCannon;
+        
+        // Calculate angle and fire
+        const dx = bagCenterX - activeCannon.x;
+        const dy = bagCenterY - activeCannon.y;
+        activeCannon.angle = Math.atan2(dy, dx);
+        activeCannon.isFiring = true;
+        activeCannon.fireProgress = 0;
+        activeCannon.targetBag = block.id;
+        
+        // Create cannonball
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const speed = 8;
+        state.cannonballs.push({
+          x: activeCannon.x,
+          y: activeCannon.y,
+          vx: (dx / distance) * speed,
+          vy: (dy / distance) * speed,
+          targetBagId: block.id,
+          life: 300,
+        });
+      }
     }
 
-    // Check if hit bottom without robot intervention
+    // Check if hit by cannonball
+    const state = animationStateRef.current;
+    for (let i = 0; i < state.cannonballs.length; i++) {
+      const ball = state.cannonballs[i];
+      if (ball.targetBagId === block.id) {
+        const dx = ball.x - (block.x + block.width / 2);
+        const dy = ball.y - (block.y + block.height / 2);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < block.width / 2 + 8) { // Ball radius is 8
+          block.isExploding = true;
+          block.explosionTime = 0;
+          
+          // Remove the cannonball
+          state.cannonballs.splice(i, 1);
+          
+          // Create explosion particles
+          const particleCount = Math.min(40, Math.floor(block.width / 2));
+          for (let j = 0; j < particleCount; j++) {
+            state.particles.push(createParticle(
+              block.x + block.width / 2,
+              block.y + block.height / 2,
+              block.isLong
+            ));
+          }
+          
+          return true;
+        }
+      }
+    }
+
+    // Check if hit bottom without being shot
     if (block.y + block.height >= canvas.height - 60) {
       block.isExploding = true;
       block.explosionTime = 0;
 
-      // Create normal particles for missed bags
+      // Create smaller particles for missed bags
       const particleCount = Math.min(15, Math.floor(block.width / 5));
-      const state = animationStateRef.current;
       for (let i = 0; i < particleCount; i++) {
         state.particles.push(createParticle(
           block.x + block.width / 2,
@@ -435,55 +483,60 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Update robot
-  const updateRobot = useCallback((robot: Robot, deltaTime: number, canvasHeight: number): void => {
-    robot.y = canvasHeight - 80; // Position robot near bottom
+  // Update cannons
+  const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
+    const state = animationStateRef.current;
     
-    if (robot.isActive) {
-      // Move robot towards target
-      const dx = robot.targetX - robot.x;
-      const speed = 5;
-      
-      if (Math.abs(dx) > 5) {
-        robot.x += Math.sign(dx) * speed;
-      } else {
-        robot.x = robot.targetX;
+    // Position cannons
+    state.leftCannon.x = 50;
+    state.leftCannon.y = canvasHeight - 60;
+    state.rightCannon.x = canvasWidth - 50;
+    state.rightCannon.y = canvasHeight - 60;
+    
+    // Update firing animation
+    [state.leftCannon, state.rightCannon].forEach(cannon => {
+      if (cannon.isFiring) {
+        cannon.fireProgress += deltaTime * 0.02;
         
-        // Start swinging when reached target
-        if (!robot.isSwinging) {
-          robot.isSwinging = true;
-          robot.swingProgress = 0;
+        if (cannon.fireProgress >= 1) {
+          cannon.isFiring = false;
+          cannon.fireProgress = 0;
+          cannon.targetBag = null;
         }
       }
-      
-      // Handle swing animation
-      if (robot.isSwinging) {
-        robot.swingProgress += deltaTime * 0.01; // Swing speed
-        
-        if (robot.swingProgress >= 1) {
-          // Swing complete - reset robot
-          robot.isActive = false;
-          robot.isSwinging = false;
-          robot.swingProgress = 0;
-          robot.targetBag = null;
-          robot.x = -100; // Move off-screen
-          robot.targetX = -100;
-        }
-      }
-    }
+    });
   }, []);
 
-  // Activate robot for incoming bag
-  const activateRobotForBag = useCallback((bagX: number, bagId: string) => {
-    const robot = animationStateRef.current.robot;
+  // Create cannonball
+  const createCannonball = useCallback((cannon: Cannon, targetX: number, targetY: number, bagId: string): Cannonball => {
+    const dx = targetX - cannon.x;
+    const dy = targetY - cannon.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const speed = 8;
     
-    if (!robot.isActive) {
-      robot.isActive = true;
-      robot.targetX = bagX;
-      robot.targetBag = bagId;
-      robot.isSwinging = false;
-      robot.swingProgress = 0;
-    }
+    return {
+      x: cannon.x,
+      y: cannon.y,
+      vx: (dx / distance) * speed,
+      vy: (dy / distance) * speed,
+      targetBagId: bagId,
+      life: 300, // 5 seconds at 60fps
+    };
+  }, []);
+
+
+
+  // Update cannonballs
+  const updateCannonballs = useCallback((deltaTime: number): void => {
+    const state = animationStateRef.current;
+    
+    state.cannonballs = state.cannonballs.filter(ball => {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+      ball.life -= deltaTime;
+      
+      return ball.life > 0;
+    });
   }, []);
 
   // Draw money bag without dollar sign for better readability
@@ -663,79 +716,95 @@ export function LiquidationCanvas({
     ctx.restore();
   }, []);
 
-  // Draw robot with pickaxe
-  const drawRobot = useCallback((ctx: CanvasRenderingContext2D, robot: Robot) => {
-    if (!robot.isActive) return;
-
+  // Draw cannon in Napoleon style
+  const drawCannon = useCallback((ctx: CanvasRenderingContext2D, cannon: Cannon) => {
     ctx.save();
-    ctx.translate(robot.x, robot.y);
+    ctx.translate(cannon.x, cannon.y);
     
-    // Robot body (simple rectangular design)
-    ctx.fillStyle = '#666666';
-    ctx.fillRect(-15, -40, 30, 35);
+    // Cannon base/carriage (wood)
+    ctx.fillStyle = '#8B4513'; // Brown wood
+    ctx.fillRect(-30, -10, 60, 20);
     
-    // Robot head
-    ctx.fillStyle = '#888888';
-    ctx.fillRect(-12, -55, 24, 20);
+    // Cannon wheels
+    ctx.fillStyle = '#654321'; // Dark brown
+    ctx.beginPath();
+    ctx.arc(-20, 10, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(20, 10, 12, 0, Math.PI * 2);
+    ctx.fill();
     
-    // Eyes (LED lights)
-    ctx.fillStyle = '#00ff00';
-    ctx.fillRect(-8, -50, 4, 4);
-    ctx.fillRect(4, -50, 4, 4);
-    
-    // Arms
-    ctx.fillStyle = '#666666';
-    ctx.fillRect(-25, -35, 10, 20); // Left arm
-    ctx.fillRect(15, -35, 10, 20);  // Right arm
-    
-    // Legs
-    ctx.fillRect(-18, -5, 12, 25);  // Left leg
-    ctx.fillRect(6, -5, 12, 25);    // Right leg
-    
-    // Pickaxe
-    ctx.strokeStyle = '#8B4513'; // Brown handle
-    ctx.lineWidth = 4;
-    
-    if (robot.isSwinging) {
-      // Animate pickaxe swing
-      const swingAngle = -Math.PI/3 + (robot.swingProgress * Math.PI/2);
-      const pickX = Math.cos(swingAngle) * 40;
-      const pickY = Math.sin(swingAngle) * 40;
-      
-      // Handle
+    // Wheel spokes
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3;
       ctx.beginPath();
-      ctx.moveTo(20, -30);
-      ctx.lineTo(20 + pickX, -30 + pickY);
+      ctx.moveTo(-20, 10);
+      ctx.lineTo(-20 + Math.cos(angle) * 8, 10 + Math.sin(angle) * 8);
       ctx.stroke();
-      
-      // Pickaxe head
-      ctx.fillStyle = '#C0C0C0'; // Silver
-      ctx.fillRect(18 + pickX, -35 + pickY, 8, 10);
-      
-      // Pick point
       ctx.beginPath();
-      ctx.moveTo(22 + pickX, -25 + pickY);
-      ctx.lineTo(30 + pickX, -20 + pickY);
-      ctx.lineTo(22 + pickX, -15 + pickY);
-      ctx.fill();
-    } else {
-      // Static pickaxe position
-      ctx.beginPath();
-      ctx.moveTo(20, -30);
-      ctx.lineTo(20, -70);
+      ctx.moveTo(20, 10);
+      ctx.lineTo(20 + Math.cos(angle) * 8, 10 + Math.sin(angle) * 8);
       ctx.stroke();
-      
-      // Pickaxe head
-      ctx.fillStyle = '#C0C0C0';
-      ctx.fillRect(18, -75, 8, 10);
-      
-      // Pick point
-      ctx.beginPath();
-      ctx.moveTo(22, -65);
-      ctx.lineTo(30, -60);
-      ctx.lineTo(22, -55);
-      ctx.fill();
     }
+    
+    // Cannon barrel (bronze/brass color)
+    ctx.fillStyle = '#CD7F32'; // Bronze
+    const barrelLength = 50;
+    const barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 6; // Default elevation
+    
+    ctx.save();
+    ctx.rotate(barrelAngle);
+    ctx.fillRect(0, -8, barrelLength, 16);
+    
+    // Barrel rings (decorative)
+    ctx.fillStyle = '#B8860B'; // Dark goldenrod
+    for (let i = 10; i < barrelLength; i += 12) {
+      ctx.fillRect(i, -9, 3, 18);
+    }
+    
+    // Muzzle
+    ctx.fillStyle = '#2F4F4F'; // Dark slate gray
+    ctx.fillRect(barrelLength - 2, -6, 4, 12);
+    
+    // Fire effect when firing
+    if (cannon.isFiring && cannon.fireProgress < 0.3) {
+      ctx.fillStyle = '#FF4500'; // Orange fire
+      ctx.globalAlpha = 1 - cannon.fireProgress * 3;
+      ctx.fillRect(barrelLength, -15, 30, 30);
+      
+      ctx.fillStyle = '#FFD700'; // Golden center
+      ctx.fillRect(barrelLength, -8, 20, 16);
+      ctx.globalAlpha = 1;
+    }
+    
+    ctx.restore();
+    
+    // Cannon emblem (Napoleonic eagle)
+    ctx.fillStyle = '#FFD700'; // Gold
+    ctx.font = '16px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', 0, -15);
+    
+    ctx.restore();
+  }, []);
+
+  // Draw cannonball
+  const drawCannonball = useCallback((ctx: CanvasRenderingContext2D, ball: Cannonball) => {
+    ctx.save();
+    ctx.fillStyle = '#2F4F4F'; // Dark iron color
+    ctx.shadowColor = '#000000';
+    ctx.shadowBlur = 5;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Highlight for 3D effect
+    ctx.fillStyle = '#696969';
+    ctx.beginPath();
+    ctx.arc(ball.x - 2, ball.y - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
     
     ctx.restore();
   }, []);
@@ -965,9 +1034,16 @@ export function LiquidationCanvas({
         return alive;
       });
 
-      // Update and draw robot
-      updateRobot(state.robot, deltaTime, canvas.height);
-      drawRobot(ctx, state.robot);
+      // Update and draw cannons
+      updateCannons(canvas.width, canvas.height, deltaTime);
+      drawCannon(ctx, state.leftCannon);
+      drawCannon(ctx, state.rightCannon);
+
+      // Update and draw cannonballs
+      updateCannonballs(deltaTime);
+      state.cannonballs.forEach(ball => {
+        drawCannonball(ctx, ball);
+      });
 
       // Draw controls instructions
       ctx.save();
@@ -979,7 +1055,7 @@ export function LiquidationCanvas({
     }
 
     requestAnimationFrame(animate);
-  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart, updateRobot, drawRobot, activateRobotForBag]);
+  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart, updateCannons, drawCannon, drawCannonball, updateCannonballs]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

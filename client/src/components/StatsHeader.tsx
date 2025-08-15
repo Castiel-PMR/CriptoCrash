@@ -4,11 +4,9 @@ import { MarketStats } from '@shared/schema';
 interface StatsHeaderProps {
   stats: MarketStats;
   isConnected: boolean;
-  animationSpeed: number;
-  onSpeedChange: (speed: number) => void;
 }
 
-export function StatsHeader({ stats, isConnected, animationSpeed, onSpeedChange }: StatsHeaderProps) {
+export function StatsHeader({ stats, isConnected }: StatsHeaderProps) {
   const formatCurrency = (amount: number) => {
     if (amount >= 1000000) {
       return `$${(amount / 1000000).toFixed(1)}M`;
@@ -62,20 +60,7 @@ export function StatsHeader({ stats, isConnected, animationSpeed, onSpeedChange 
               </span>
             </div>
             
-            {/* Speed Control */}
-            <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-400">Speed:</label>
-              <input 
-                type="range" 
-                min="0.5" 
-                max="3" 
-                step="0.5" 
-                value={animationSpeed}
-                onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
-                className="w-20 h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
-              />
-              <span className="text-sm text-gray-400 min-w-[2rem]">{animationSpeed}x</span>
-            </div>
+
           </div>
         </div>
       </div>

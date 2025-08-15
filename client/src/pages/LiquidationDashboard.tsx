@@ -7,7 +7,6 @@ import { useLiquidationData } from '../hooks/useLiquidationData';
 import { Pause, Play, Settings, RefreshCw } from 'lucide-react';
 
 export default function LiquidationDashboard() {
-  const [animationSpeed, setAnimationSpeed] = useState(0.5); // Slower initial speed
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
@@ -40,8 +39,6 @@ export default function LiquidationDashboard() {
       <StatsHeader 
         stats={marketStats}
         isConnected={isConnected}
-        animationSpeed={animationSpeed}
-        onSpeedChange={setAnimationSpeed}
       />
       
       {/* Main Layout with Sidebar */}
@@ -50,7 +47,6 @@ export default function LiquidationDashboard() {
         <div className="flex-1 relative">
           <LiquidationCanvas 
             liquidations={filteredLiquidations}
-            animationSpeed={animationSpeed}
             isPaused={isPaused}
           />
         </div>
@@ -183,20 +179,6 @@ export default function LiquidationDashboard() {
             <h3 className="text-xl font-semibold mb-4 text-accent-blue">Settings</h3>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Animation Speed: {animationSpeed}x
-                </label>
-                <input
-                  type="range"
-                  min="0.1"
-                  max="5"
-                  step="0.1"
-                  value={animationSpeed}
-                  onChange={(e) => setAnimationSpeed(parseFloat(e.target.value))}
-                  className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
-                />
-              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">

@@ -4,7 +4,6 @@ import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
-  animationSpeed: number;
   isPaused: boolean;
 }
 
@@ -12,7 +11,7 @@ interface ExtendedAnimationState extends AnimationState {
   platform: Platform;
 }
 
-export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: LiquidationCanvasProps) {
+export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStateRef = useRef<ExtendedAnimationState>({
     liquidations: [],
@@ -70,23 +69,30 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     const value = liquidation.value;
     let size;
     
-    // More dramatic size scaling based on ranges
-    if (value < 10000) {
-      size = 80; // $1K-10K = small bags
+    // Фиксированная система размеров и скоростей
+    let baseVelocity;
+    if (value < 5000) {
+      size = 60; // Очень маленькие
+      baseVelocity = 2.5; // Быстрые
+    } else if (value < 15000) {
+      size = 80; // Маленькие  
+      baseVelocity = 2.0; // Средне-быстрые
     } else if (value < 50000) {
-      size = 100; // $10K-50K = medium-small bags
+      size = 100; // Средние
+      baseVelocity = 1.6; // Средние
     } else if (value < 100000) {
-      size = 120; // $50K-100K = medium bags  
+      size = 130; // Средне-большие
+      baseVelocity = 1.3; // Средне-медленные
     } else if (value < 500000) {
-      size = 150; // $100K-500K = large bags
+      size = 160; // Большие
+      baseVelocity = 1.0; // Медленные
     } else if (value < 1000000) {
-      size = 180; // $500K-1M = very large bags
+      size = 200; // Очень большие
+      baseVelocity = 0.8; // Очень медленные
     } else {
-      size = 220; // $1M+ = massive bags
+      size = 250; // Огромные
+      baseVelocity = 0.6; // Самые медленные
     }
-
-    // Speed inversely proportional to size (bigger bags fall much slower)
-    const baseVelocity = Math.max(0.2, 2.0 - (size - 80) / 80); // Slower speed for bigger bags
 
     console.log(`Liquidation: $${value.toFixed(0)} -> Size: ${size}px, Speed: ${baseVelocity.toFixed(2)}`);;
 
@@ -155,9 +161,11 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     for (let i = 0; i < state.liquidations.length; i++) {
       const bag = state.liquidations[i];
       
+      // Расширенная зона клика (на 20px больше со всех сторон)
+      const clickPadding = 20;
       if (!bag.isExploding && 
-          clickX >= bag.x && clickX <= bag.x + bag.width &&
-          clickY >= bag.y && clickY <= bag.y + bag.height) {
+          clickX >= bag.x - clickPadding && clickX <= bag.x + bag.width + clickPadding &&
+          clickY >= bag.y - clickPadding && clickY <= bag.y + bag.height + clickPadding) {
         
         // Create click explosion immediately
         bag.isExploding = true;
@@ -199,9 +207,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       return block.explosionTime < 500;
     }
 
-    // Physics with constant speed (not affected by animationSpeed)
-    block.velocity += 0.02; // Constant gravity
-    block.y += block.velocity;
+    // Постоянная физика с базовой скоростью мешочка
+    block.y += block.velocity; // Используем базовую скорость мешочка
     block.rotation += block.rotationSpeed;
 
     // Check if hit bottom
@@ -404,7 +411,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     }
 
     requestAnimationFrame(animate);
-  }, [animationSpeed, isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle]);
+  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

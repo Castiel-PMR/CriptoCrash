@@ -392,72 +392,122 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Draw money bag
+  // Draw enhanced money bag with realistic styling
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
     ctx.save();
     ctx.globalAlpha = block.opacity;
     ctx.translate(block.x + block.width / 2, block.y + block.height / 2);
 
-    // Money bag shape
     const bagWidth = block.width;
     const bagHeight = block.height;
-    const neckHeight = bagHeight * 0.15;
+    const neckHeight = bagHeight * 0.12;
     
-    // Main bag body (rounded rectangle)
+    // Drop shadow for depth
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    
+    // Main bag body with bulged shape for realism
     ctx.beginPath();
-    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.1);
+    const bodyY = -bagHeight/2 + neckHeight;
+    const bodyHeight = bagHeight - neckHeight;
     
-    // Gradient fill
-    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bagWidth/2);
+    // Create more realistic bulged bag shape
+    ctx.moveTo(-bagWidth/2, bodyY);
+    ctx.quadraticCurveTo(-bagWidth/2 * 1.08, bodyY + bodyHeight * 0.3, -bagWidth/2 * 1.02, bodyY + bodyHeight * 0.8);
+    ctx.quadraticCurveTo(-bagWidth/3, bodyY + bodyHeight, 0, bodyY + bodyHeight * 1.02);
+    ctx.quadraticCurveTo(bagWidth/3, bodyY + bodyHeight, bagWidth/2 * 1.02, bodyY + bodyHeight * 0.8);
+    ctx.quadraticCurveTo(bagWidth/2 * 1.08, bodyY + bodyHeight * 0.3, bagWidth/2, bodyY);
+    ctx.closePath();
+    
+    // Enhanced gradient with more realistic lighting
+    const gradient = ctx.createRadialGradient(-bagWidth/4, bodyY + bodyHeight/4, 0, 0, bodyY + bodyHeight/2, bagWidth/1.2);
     if (block.isLong) {
-      gradient.addColorStop(0, '#8B4513'); // Brown for long liquidations
-      gradient.addColorStop(0.7, '#654321');
-      gradient.addColorStop(1, '#3C2415');
-      ctx.shadowColor = '#ef4444';
+      gradient.addColorStop(0, '#CD853F'); // Sandy brown highlight
+      gradient.addColorStop(0.4, '#A0522D'); // Sienna 
+      gradient.addColorStop(0.8, '#8B4513'); // Saddle brown
+      gradient.addColorStop(1, '#654321'); // Dark brown shadow
     } else {
-      gradient.addColorStop(0, '#228B22'); // Green for short liquidations
-      gradient.addColorStop(0.7, '#1F5F1F');
-      gradient.addColorStop(1, '#0D2B0D');
-      ctx.shadowColor = '#10b981';
+      gradient.addColorStop(0, '#90EE90'); // Light green highlight
+      gradient.addColorStop(0.4, '#32CD32'); // Lime green
+      gradient.addColorStop(0.8, '#228B22'); // Forest green
+      gradient.addColorStop(1, '#006400'); // Dark green shadow
     }
     
-    ctx.shadowBlur = 8;
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    // Bag neck/tie
+    // Add subtle fabric texture with cross-hatching
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = block.isLong ? 'rgba(139, 69, 19, 0.15)' : 'rgba(34, 139, 34, 0.15)';
+    ctx.lineWidth = 0.8;
+    
+    // Vertical texture lines
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      const lineX = i * bagWidth / 8;
+      ctx.moveTo(lineX, bodyY + bodyHeight * 0.1);
+      ctx.lineTo(lineX, bodyY + bodyHeight * 0.9);
+      ctx.stroke();
+    }
+    
+    // Horizontal texture lines  
+    for (let i = 1; i <= 3; i++) {
+      ctx.beginPath();
+      const lineY = bodyY + bodyHeight * (i * 0.25);
+      ctx.moveTo(-bagWidth/3, lineY);
+      ctx.lineTo(bagWidth/3, lineY);
+      ctx.stroke();
+    }
+    
+    // Bag neck with gathered fabric look
     ctx.beginPath();
-    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.3, neckHeight, 0, 0, Math.PI * 2);
-    ctx.fillStyle = block.isLong ? '#654321' : '#1F5F1F';
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.22, neckHeight * 0.7, 0, 0, Math.PI * 2);
+    ctx.fillStyle = block.isLong ? '#8B4513' : '#228B22';
     ctx.fill();
     
-    // Rope/string on neck
-    ctx.strokeStyle = '#8B4513';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.32, neckHeight * 1.1, 0, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Text with better readability - add background/outline
-    ctx.shadowBlur = 0;
+    // Rope with twisted texture
+    const ropeGradient = ctx.createLinearGradient(-bagWidth/4, -bagHeight/2, bagWidth/4, -bagHeight/2);
+    ropeGradient.addColorStop(0, '#DEB887');
+    ropeGradient.addColorStop(0.5, '#CD853F');
+    ropeGradient.addColorStop(1, '#DEB887');
     
-    // Removed dollar sign for better coin symbol and amount readability
+    ctx.strokeStyle = ropeGradient;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.25, neckHeight * 0.8, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Small rope knot detail
+    ctx.fillStyle = '#8B7355';
+    ctx.beginPath();
+    ctx.ellipse(bagWidth * 0.2, -bagHeight/2 + neckHeight/2, 2, 1.5, Math.PI/4, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Ensure text is centered
+    // Enhanced text styling
+    ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Coin symbol with outline (top position) - larger font
-    const coinFontSize = Math.max(12, bagWidth * 0.16);
+    // Coin symbol with gold glow effect
+    const coinFontSize = Math.max(11, bagWidth * 0.17);
     ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
+    
+    // Gold glow for coin
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur = 6;
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText(block.coin, 0, bodyY + bodyHeight * 0.3);
+    
+    // Sharp black outline
+    ctx.shadowBlur = 0;
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText(block.coin, 0, -bagHeight * 0.1);
+    ctx.strokeText(block.coin, 0, bodyY + bodyHeight * 0.3);
 
-    // Amount text with outline for better readability (moved lower)
-    const amountFontSize = Math.max(12, bagWidth * 0.15);
+    // Amount text with subtle white glow
+    const amountFontSize = Math.max(10, bagWidth * 0.13);
     ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
     let formattedAmount;
     if (block.amount >= 1000000) {
@@ -467,11 +517,18 @@ export function LiquidationCanvas({
     } else {
       formattedAmount = block.amount.toFixed(0);
     }
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeText(formattedAmount, 0, bagHeight * 0.2);
+    
+    // White glow for amount
+    ctx.shadowColor = '#FFFFFF';
+    ctx.shadowBlur = 3;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(formattedAmount, 0, bagHeight * 0.2);
+    ctx.fillText(formattedAmount, 0, bodyY + bodyHeight * 0.7);
+    
+    // Black outline for readability
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 1.8;
+    ctx.strokeText(formattedAmount, 0, bodyY + bodyHeight * 0.7);
 
     ctx.restore();
   }, []);

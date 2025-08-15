@@ -1208,18 +1208,91 @@ export function LiquidationCanvas({
       }
     });
     
-    // Draw minimal price labels with live indicator
+    // Draw price scale on the right side
+    const scaleWidth = 80; // Narrow price scale width
+    const margin = height * 0.1;
+    const chartHeight = height - 2 * margin;
+    
+    // Price scale background (semi-transparent dark)
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(width - scaleWidth, margin, scaleWidth, chartHeight);
+    
+    // Price scale labels
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = '#888888';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    
+    // Calculate price levels (5-7 levels)
+    const priceStep = priceRange / 6;
+    for (let i = 0; i <= 6; i++) {
+      const price = minPrice + (i * priceStep);
+      const y = margin + chartHeight - (i * chartHeight / 6);
+      
+      // Price label
+      ctx.fillText(`${Math.round(price).toLocaleString()}`, width - 5, y + 3);
+      
+      // Small tick mark
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(width - scaleWidth, y);
+      ctx.lineTo(width - scaleWidth + 5, y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.6;
+    }
+    
+    // Current price indicator
+    const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
+    if (lastCandle) {
+      const currentPrice = lastCandle.close;
+      const currentPriceY = margin + ((maxPrice - currentPrice) / priceRange) * chartHeight;
+      
+      // Current price line across scale
+      ctx.globalAlpha = 0.8;
+      ctx.strokeStyle = '#ff4444';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(width - scaleWidth, currentPriceY);
+      ctx.lineTo(width, currentPriceY);
+      ctx.stroke();
+      
+      // Current price label with background
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#ff4444';
+      ctx.fillRect(width - scaleWidth + 2, currentPriceY - 8, scaleWidth - 4, 16);
+      
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 10px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${Math.round(currentPrice).toLocaleString()}`, width - scaleWidth/2, currentPriceY + 3);
+      
+      // Add live indicator (pulsing dot) next to current price
+      const timeSinceUpdate = Date.now() - lastUpdateTime;
+      const isRecent = timeSinceUpdate < 20000; // 20 seconds
+      if (isRecent) {
+        const alpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.005); // Pulsing effect
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = '#00ff88';
+        ctx.beginPath();
+        ctx.arc(width - scaleWidth - 8, currentPriceY, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    
+    // Draw minimal price labels with live indicator (top header)
     ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#666666';
     ctx.font = '9px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
     
-    const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
     if (lastCandle) {
-      // Show current Bitcoin price
-      ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, width - 10, 20);
+      // Show current Bitcoin price in header
+      ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, width - scaleWidth - 10, 20);
       
-      // Add live indicator (pulsing dot)
+      // Add live indicator (pulsing dot) in header
       const timeSinceUpdate = Date.now() - lastUpdateTime;
       const isRecent = timeSinceUpdate < 20000; // 20 seconds
       if (isRecent) {
@@ -1227,13 +1300,13 @@ export function LiquidationCanvas({
         ctx.globalAlpha = alpha;
         ctx.fillStyle = '#00ff88';
         ctx.beginPath();
-        ctx.arc(width - 120, 15, 3, 0, Math.PI * 2);
+        ctx.arc(width - scaleWidth - 120, 15, 3, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = '#666666';
         ctx.textAlign = 'right';
-        ctx.fillText('LIVE', width - 130, 20);
+        ctx.fillText('LIVE', width - scaleWidth - 130, 20);
       }
     }
     

@@ -44,9 +44,10 @@ export function LiquidationCanvas({
       targetBag: null,
       side: 'left',
       movingRight: true,
-      speed: 0.3,
+      speed: 0.5,
       minX: 30,
-      maxX: 200,
+      maxX: 0, // Will be set dynamically based on canvas width
+      wheelRotation: 0,
     },
     rightCannon: {
       x: 0, // Will be set when canvas is available
@@ -602,19 +603,33 @@ export function LiquidationCanvas({
   const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
     const state = animationStateRef.current;
     
+    // Set dynamic max position near mute button (leave 100px space for button)
+    const dynamicMaxX = canvasWidth - 120;
+    if (state.leftCannon.maxX === 0) {
+      state.leftCannon.maxX = dynamicMaxX;
+    }
+    
     // Move cannon horizontally along bottom border
     const frameMultiplier = deltaTime / 16.67;
+    const speed = state.leftCannon.speed || 0.5;
+    
     if (state.leftCannon.movingRight) {
-      state.leftCannon.x += (state.leftCannon.speed || 0.3) * frameMultiplier;
-      if (state.leftCannon.x >= (state.leftCannon.maxX || 200)) {
+      state.leftCannon.x += speed * frameMultiplier;
+      if (state.leftCannon.x >= dynamicMaxX) {
         state.leftCannon.movingRight = false;
       }
     } else {
-      state.leftCannon.x -= (state.leftCannon.speed || 0.3) * frameMultiplier;
+      state.leftCannon.x -= speed * frameMultiplier;
       if (state.leftCannon.x <= (state.leftCannon.minX || 30)) {
         state.leftCannon.movingRight = true;
       }
     }
+    
+    // Rotate wheels based on movement (realistic wheel rotation)
+    const wheelRadius = 15;
+    const distancePerFrame = speed * frameMultiplier;
+    const rotationPerFrame = distancePerFrame / wheelRadius;
+    state.leftCannon.wheelRotation = (state.leftCannon.wheelRotation || 0) + rotationPerFrame;
     
     // Position cannon slightly raised from bottom
     state.leftCannon.y = canvasHeight - 50;
@@ -882,17 +897,25 @@ export function LiquidationCanvas({
     ctx.arc(25, 35, 15, 0, Math.PI * 2);
     ctx.fill();
     
-    // Wheel spokes (8 spokes each)
+    // Wheel spokes (8 spokes each) - with rotation
     ctx.strokeStyle = '#4A2C17';
     ctx.lineWidth = 2;
+    const wheelRotation = cannon.wheelRotation || 0;
+    
     for (let wheel of [-25, 25]) {
+      ctx.save();
+      ctx.translate(wheel, 35);
+      ctx.rotate(wheelRotation);
+      
       for (let i = 0; i < 8; i++) {
         const angle = (i * Math.PI) / 4;
         ctx.beginPath();
-        ctx.moveTo(wheel, 35);
-        ctx.lineTo(wheel + Math.cos(angle) * 12, 35 + Math.sin(angle) * 12);
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(angle) * 12, Math.sin(angle) * 12);
         ctx.stroke();
       }
+      
+      ctx.restore();
       
       // Hub
       ctx.fillStyle = '#4A2C17';

@@ -42,6 +42,7 @@ export interface Cannon {
   speed?: number;
   minX?: number;
   maxX?: number;
+  wheelRotation?: number;
 }
 
 export interface Cannonball {

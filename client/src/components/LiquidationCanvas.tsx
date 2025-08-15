@@ -442,17 +442,17 @@ export function LiquidationCanvas({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Coin symbol with outline (top position) - larger font
-    const coinFontSize = Math.max(12, bagWidth * 0.16);
+    // Coin symbol with outline (top position) - bigger font but fits in bag
+    const coinFontSize = Math.max(14, bagWidth * 0.22);
     ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
+    ctx.strokeText(block.coin, 0, -bagHeight * 0.05);
     ctx.fillStyle = '#FFD700';
-    ctx.fillText(block.coin, 0, -bagHeight * 0.1);
+    ctx.fillText(block.coin, 0, -bagHeight * 0.05);
 
-    // Amount text with outline for better readability (moved lower)
-    const amountFontSize = Math.max(12, bagWidth * 0.15);
+    // Amount text with outline for better readability - bigger font
+    const amountFontSize = Math.max(13, bagWidth * 0.2);
     ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
     let formattedAmount;
     if (block.amount >= 1000000) {
@@ -464,9 +464,9 @@ export function LiquidationCanvas({
     }
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    ctx.strokeText(formattedAmount, 0, bagHeight * 0.2);
+    ctx.strokeText(formattedAmount, 0, bagHeight * 0.25);
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(formattedAmount, 0, bagHeight * 0.2);
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
 
     ctx.restore();
   }, []);

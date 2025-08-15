@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Liquidation, Platform } from '@shared/schema';
 import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation';
 
@@ -542,7 +542,106 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.restore();
   }, []);
 
+  // Static Bitcoin chart data - generated once
+  const staticBitcoinData = useMemo(() => {
+    const dataPoints = 100;
+    const basePrice = 96000; // Current BTC price around $96k
+    const volatility = 2000; // Price volatility
+    
+    // Create realistic price movement
+    const prices: number[] = [];
+    let currentPrice = basePrice;
+    
+    for (let i = 0; i < dataPoints; i++) {
+      // Add some realistic price movement
+      const change = (Math.random() - 0.5) * volatility * 0.1;
+      currentPrice += change;
+      
+      // Keep price in reasonable range
+      currentPrice = Math.max(basePrice - volatility, Math.min(basePrice + volatility, currentPrice));
+      prices.push(currentPrice);
+    }
+    
+    return prices;
+  }, []);
 
+  // Draw Bitcoin chart background
+  const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    ctx.save();
+    
+    // Very dim background for the chart
+    ctx.globalAlpha = 0.08;
+    
+    const prices = staticBitcoinData;
+    
+    // Find min/max for scaling
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+    
+    // Draw grid lines
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 1;
+    
+    // Horizontal grid lines (price levels)
+    for (let i = 0; i <= 10; i++) {
+      const y = (height * i) / 10;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+    
+    // Vertical grid lines (time)
+    for (let i = 0; i <= 12; i++) {
+      const x = (width * i) / 12;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+    
+    // Draw price line
+    ctx.strokeStyle = '#f7931a'; // Bitcoin orange color
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    for (let i = 0; i < prices.length; i++) {
+      const x = (width * i) / (prices.length - 1);
+      const normalizedPrice = (prices[i] - minPrice) / priceRange;
+      const y = height - (normalizedPrice * height * 0.8) - (height * 0.1); // Leave margins
+      
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+    
+    // Draw price labels
+    ctx.fillStyle = '#666666';
+    ctx.font = '12px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    
+    // Current price at the end
+    const currentY = height - ((prices[prices.length - 1] - minPrice) / priceRange * height * 0.8) - (height * 0.1);
+    ctx.fillText(`$${Math.round(prices[prices.length - 1]).toLocaleString()}`, width - 10, currentY);
+    
+    // High price
+    ctx.fillText(`$${Math.round(maxPrice).toLocaleString()}`, width - 10, height * 0.1 + 15);
+    
+    // Low price
+    ctx.fillText(`$${Math.round(minPrice).toLocaleString()}`, width - 10, height * 0.9);
+    
+    // Time labels
+    ctx.textAlign = 'center';
+    ctx.fillText('24h', width * 0.1, height - 10);
+    ctx.fillText('12h', width * 0.5, height - 10);
+    ctx.fillText('Now', width * 0.9, height - 10);
+    
+    ctx.restore();
+  }, [staticBitcoinData]);
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {
@@ -556,9 +655,11 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     state.isPaused = isPaused;
 
     if (!isPaused) {
-      // Clear canvas with fade effect
-      ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Clear canvas completely to remove traces
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw Bitcoin chart background (dimmed)
+      drawBitcoinChart(ctx, canvas.width, canvas.height);
 
 
 

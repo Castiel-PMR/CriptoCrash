@@ -10,7 +10,7 @@ export default function LiquidationDashboard() {
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
-  const [showGrid, setShowGrid] = useState(true);
+
   const [chartOpacity, setChartOpacity] = useState(12); // Opacity in percentage
   
   const { 
@@ -34,8 +34,7 @@ export default function LiquidationDashboard() {
 
   return (
     <div className="min-h-screen bg-cyber-dark text-white font-sans overflow-hidden">
-      {/* Background Grid */}
-      <div className="fixed inset-0 grid-bg opacity-30 pointer-events-none" />
+
       
       {/* Stats Header */}
       <StatsHeader 

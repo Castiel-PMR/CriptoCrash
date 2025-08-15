@@ -381,8 +381,8 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if bag is in range for cannon firing (middle area of screen)
-    if (block.y + block.height >= canvas.height / 2 && block.y + block.height <= canvas.height - 100) {
+    // Check if bag is low enough for cannon firing (lower part of screen)
+    if (block.y + block.height >= canvas.height * 0.7) {
       const state = animationStateRef.current;
       const leftCannon = state.leftCannon;
       const rightCannon = state.rightCannon;
@@ -392,10 +392,11 @@ export function LiquidationCanvas({
         const bagCenterX = block.x + block.width / 2;
         const bagCenterY = block.y + block.height / 2;
         
+        // Choose cannon that fires at FARTHER targets from itself
         const leftDistance = Math.abs(bagCenterX - leftCannon.x);
         const rightDistance = Math.abs(bagCenterX - rightCannon.x);
         
-        const activeCannon = leftDistance < rightDistance ? leftCannon : rightCannon;
+        const activeCannon = leftDistance > rightDistance ? leftCannon : rightCannon;
         
         // Calculate angle and fire
         const dx = bagCenterX - activeCannon.x;
@@ -721,6 +722,11 @@ export function LiquidationCanvas({
     ctx.save();
     ctx.translate(cannon.x, cannon.y);
     
+    // Mirror right cannon horizontally
+    if (cannon.side === 'right') {
+      ctx.scale(-1, 1);
+    }
+    
     // Cannon base/carriage (wood)
     ctx.fillStyle = '#8B4513'; // Brown wood
     ctx.fillRect(-30, -10, 60, 20);
@@ -752,7 +758,12 @@ export function LiquidationCanvas({
     // Cannon barrel (bronze/brass color)
     ctx.fillStyle = '#CD7F32'; // Bronze
     const barrelLength = 50;
-    const barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 6; // Default elevation
+    let barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 6; // Default elevation
+    
+    // Adjust angle for mirrored right cannon
+    if (cannon.side === 'right') {
+      barrelAngle = cannon.isFiring ? -cannon.angle : -Math.PI / 6;
+    }
     
     ctx.save();
     ctx.rotate(barrelAngle);
@@ -785,6 +796,10 @@ export function LiquidationCanvas({
     ctx.fillStyle = '#FFD700'; // Gold
     ctx.font = '16px serif';
     ctx.textAlign = 'center';
+    // Don't mirror the text
+    if (cannon.side === 'right') {
+      ctx.scale(-1, 1);
+    }
     ctx.fillText('N', 0, -15);
     
     ctx.restore();
@@ -1142,12 +1157,8 @@ export function LiquidationCanvas({
         </div>
       </div>
       
-      {/* Impact Zone Indicator */}
-      <div className="absolute bottom-0 left-0 right-0 h-16 impact-zone pointer-events-none">
-        <div className="h-full flex items-center justify-center">
-          <span className="text-accent-blue text-sm font-mono opacity-60">IMPACT ZONE</span>
-        </div>
-      </div>
+
+
     </div>
   );
 }

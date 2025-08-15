@@ -392,7 +392,7 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Draw simple money bag like in the reference image
+  // Draw money bag without dollar sign for better readability
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
     ctx.save();
     ctx.globalAlpha = block.opacity;
@@ -400,68 +400,60 @@ export function LiquidationCanvas({
 
     const bagWidth = block.width;
     const bagHeight = block.height;
-    const neckHeight = bagHeight * 0.2;
+    const neckHeight = bagHeight * 0.15;
     
-    // Simple drop shadow
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetX = 3;
-    ctx.shadowOffsetY = 4;
-    
-    // Main bag body - simple rounded rectangle like in image
+    // Main bag body (rounded rectangle)
     ctx.beginPath();
-    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.15);
+    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.1);
     
-    // Simple gradient - brown/tan color like in reference
-    const gradient = ctx.createRadialGradient(-bagWidth/4, -bagHeight/4, 0, 0, 0, bagWidth/1.5);
+    // Gradient fill
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bagWidth/2);
     if (block.isLong) {
-      gradient.addColorStop(0, '#D2B48C'); // Light tan
-      gradient.addColorStop(0.6, '#B8860B'); // Dark goldenrod
-      gradient.addColorStop(1, '#8B7355');   // Darker brown
+      gradient.addColorStop(0, '#8B4513'); // Brown for long liquidations
+      gradient.addColorStop(0.7, '#654321');
+      gradient.addColorStop(1, '#3C2415');
+      ctx.shadowColor = '#ef4444';
     } else {
-      gradient.addColorStop(0, '#90EE90'); // Light green
-      gradient.addColorStop(0.6, '#32CD32'); // Lime green
-      gradient.addColorStop(1, '#228B22');   // Forest green
+      gradient.addColorStop(0, '#228B22'); // Green for short liquidations
+      gradient.addColorStop(0.7, '#1F5F1F');
+      gradient.addColorStop(1, '#0D2B0D');
+      ctx.shadowColor = '#10b981';
     }
     
+    ctx.shadowBlur = 8;
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    // Remove shadow for other elements
-    ctx.shadowBlur = 0;
-    
-    // Simple bag neck - like in reference image
+    // Bag neck/tie
     ctx.beginPath();
-    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.25, neckHeight * 0.8, 0, 0, Math.PI * 2);
-    ctx.fillStyle = block.isLong ? '#8B7355' : '#1F5F1F';
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.3, neckHeight, 0, 0, Math.PI * 2);
+    ctx.fillStyle = block.isLong ? '#654321' : '#1F5F1F';
     ctx.fill();
     
-    // Simple rope tie
-    ctx.strokeStyle = '#654321';
-    ctx.lineWidth = 3;
+    // Rope/string on neck
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.28, neckHeight * 0.9, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.32, neckHeight * 1.1, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Clean, readable text like in reference
+    // Text with better readability - no dollar sign
+    ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Coin symbol - clean and simple
-    const coinFontSize = Math.max(16, bagWidth * 0.2);
-    ctx.font = `bold ${coinFontSize}px sans-serif`;
-    
-    // Simple white text with dark outline
+    // Coin symbol with outline (top position) - larger font
+    const coinFontSize = Math.max(12, bagWidth * 0.16);
+    ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
-    
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#FFD700';
     ctx.fillText(block.coin, 0, -bagHeight * 0.1);
 
-    // Amount text - clean formatting like reference
-    const amountFontSize = Math.max(14, bagWidth * 0.18);
-    ctx.font = `bold ${amountFontSize}px sans-serif`;
+    // Amount text with outline for better readability (moved lower)
+    const amountFontSize = Math.max(12, bagWidth * 0.15);
+    ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
     let formattedAmount;
     if (block.amount >= 1000000) {
       formattedAmount = (block.amount / 1000000).toFixed(1) + 'M';
@@ -470,12 +462,9 @@ export function LiquidationCanvas({
     } else {
       formattedAmount = block.amount.toFixed(0);
     }
-    
-    // Simple white text with outline
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.strokeText(formattedAmount, 0, bagHeight * 0.2);
-    
     ctx.fillStyle = '#FFFFFF';
     ctx.fillText(formattedAmount, 0, bagHeight * 0.2);
 

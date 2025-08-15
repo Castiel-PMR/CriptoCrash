@@ -425,12 +425,15 @@ export function LiquidationCanvas({
 
     // Check if bag is in cannon's destruction range (from bottom to middle-lower part)
     const cannonRange = canvas.height * 0.75; // Range from bottom to 75% of screen height (gives chance for manual destruction)
-    if (block.y + block.height >= cannonRange) {
+    const bottomLimit = canvas.height * 0.95; // Don't let bags reach the very bottom
+    
+    // Fire at random positions within the cannon range, not immediately at crossing
+    if (block.y + block.height >= cannonRange && block.y + block.height <= bottomLimit) {
       const state = animationStateRef.current;
       const leftCannon = state.leftCannon;
       
-      // Random chance to fire - not every bag, gives more dynamic feeling
-      const shouldFire = Math.random() < 0.7; // 70% chance to fire at bags in range
+      // Random chance to fire at any point within the range
+      const shouldFire = Math.random() < 0.02; // 2% chance per frame to fire at bags in range (more random timing)
       
       // Fire left cannon only if it's not currently firing and random chance succeeds
       if (!leftCannon.isFiring && shouldFire) {
@@ -1181,14 +1184,25 @@ export function LiquidationCanvas({
       updateCannons(canvas.width, canvas.height, deltaTime);
       drawCannon(ctx, state.leftCannon);
       
-      // Draw temporary cannon range indicator (for testing)
+      // Draw temporary cannon range indicators (for testing)
       const cannonRange = canvas.height * 0.75;
+      const bottomLimit = canvas.height * 0.95;
+      
+      // Upper boundary (red)
       ctx.strokeStyle = '#ff0000';
       ctx.lineWidth = 2;
       ctx.setLineDash([10, 5]);
       ctx.beginPath();
       ctx.moveTo(0, cannonRange);
       ctx.lineTo(canvas.width, cannonRange);
+      ctx.stroke();
+      
+      // Lower boundary (orange)
+      ctx.strokeStyle = '#ff8800';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, bottomLimit);
+      ctx.lineTo(canvas.width, bottomLimit);
       ctx.stroke();
       ctx.setLineDash([]);
 

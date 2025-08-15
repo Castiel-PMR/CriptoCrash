@@ -37,6 +37,7 @@ export function LiquidationCanvas({
   });
 
   const processedLiquidations = useRef(new Set<string>());
+  const lastVisibleTime = useRef<number>(Date.now());
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -73,6 +74,25 @@ export function LiquidationCanvas({
     return () => window.removeEventListener('resize', updateCanvasSize);
   }, [updateCanvasSize]);
 
+  // Handle page visibility to prevent accumulated liquidations
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // When page becomes visible, update the last visible time
+        lastVisibleTime.current = Date.now();
+        
+        // Clear old processed liquidations to allow fresh start
+        const currentTime = Date.now();
+        processedLiquidations.current.clear();
+        
+        console.log('Page visible - cleared accumulated liquidations');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   // Create liquidation block from data
   const createLiquidationBlock = useCallback((liquidation: Liquidation): LiquidationBlock => {
     const canvas = canvasRef.current;
@@ -82,29 +102,29 @@ export function LiquidationCanvas({
     const value = liquidation.value;
     let size;
     
-    // Фиксированная система размеров и скоростей (увеличенные скорости)
+    // Более медленная система скоростей для комфортного просмотра
     let baseVelocity;
     if (value < 5000) {
       size = 60; // Очень маленькие
-      baseVelocity = 5.0; // Быстрые
+      baseVelocity = 2.0; // Замедлил с 5.0 до 2.0
     } else if (value < 15000) {
       size = 80; // Маленькие  
-      baseVelocity = 4.0; // Средне-быстрые
+      baseVelocity = 1.8; // Замедлил с 4.0 до 1.8
     } else if (value < 50000) {
       size = 100; // Средние
-      baseVelocity = 3.2; // Средние
+      baseVelocity = 1.5; // Замедлил с 3.2 до 1.5
     } else if (value < 100000) {
       size = 130; // Средне-большие
-      baseVelocity = 2.5; // Средне-медленные
+      baseVelocity = 1.3; // Замедлил с 2.5 до 1.3
     } else if (value < 500000) {
       size = 160; // Большие
-      baseVelocity = 2.0; // Медленные
+      baseVelocity = 1.0; // Замедлил с 2.0 до 1.0
     } else if (value < 1000000) {
       size = 200; // Очень большие
-      baseVelocity = 1.5; // Очень медленные
+      baseVelocity = 0.8; // Замедлил с 1.5 до 0.8
     } else {
       size = 250; // Огромные
-      baseVelocity = 1.2; // Самые медленные
+      baseVelocity = 0.6; // Замедлил с 1.2 до 0.6
     }
 
     console.log(`Liquidation: $${value.toFixed(0)} -> Size: ${size}px, Speed: ${baseVelocity.toFixed(2)}`);;
@@ -805,8 +825,18 @@ export function LiquidationCanvas({
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {
     const state = animationStateRef.current;
+    const currentTime = Date.now();
     
     liquidations.forEach(liquidation => {
+      // Skip old liquidations if page was hidden (no accumulated animations)
+      const liquidationAge = currentTime - liquidation.timestamp;
+      const maxAge = 10000; // 10 seconds max age for liquidations
+      
+      if (liquidationAge > maxAge) {
+        // Skip old liquidations
+        return;
+      }
+      
       // Check if already processed
       if (!processedLiquidations.current.has(liquidation.id)) {
         // Check if already exists in current animation

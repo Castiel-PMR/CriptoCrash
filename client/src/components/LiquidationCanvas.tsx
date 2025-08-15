@@ -1134,14 +1134,16 @@ export function LiquidationCanvas({
     
     ctx.save();
     
-    // No grid lines - clean chart background
+    // Reserve space for price scale on the right
+    const scaleWidth = 80;
+    const chartWidth = width - scaleWidth;
     
     // Draw candlesticks in monochrome style - configurable opacity
     const actualOpacity = opacity !== undefined ? opacity : chartOpacity;
     ctx.globalAlpha = actualOpacity / 100;
     
-    const candleWidth = Math.max(6, width / bitcoinCandles.length * 0.7);
-    const candleSpacing = width / bitcoinCandles.length;
+    const candleWidth = Math.max(6, chartWidth / bitcoinCandles.length * 0.7);
+    const candleSpacing = chartWidth / bitcoinCandles.length;
     
     bitcoinCandles.forEach((candle, index) => {
       const x = (index + 0.5) * candleSpacing;
@@ -1208,34 +1210,84 @@ export function LiquidationCanvas({
       }
     });
     
-    // Current price indicator only (no scale)
+    // Draw price scale to the right of chart
     const margin = height * 0.1;
     const chartHeight = height - 2 * margin;
-    const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
     
+    // Price scale background
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#333333';
+    ctx.fillRect(chartWidth, 0, scaleWidth, height);
+    
+    // Vertical separator line
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = '#444444';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(chartWidth, 0);
+    ctx.lineTo(chartWidth, height);
+    ctx.stroke();
+    
+    // Price scale labels
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = '#888888';
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.textAlign = 'right';
+    
+    // Calculate price levels (8 levels)
+    const priceStep = priceRange / 7;
+    for (let i = 0; i <= 7; i++) {
+      const price = minPrice + (i * priceStep);
+      const y = margin + chartHeight - (i * chartHeight / 7);
+      
+      // Price label
+      ctx.fillText(`${Math.round(price).toLocaleString()}`, chartWidth + scaleWidth - 5, y + 4);
+      
+      // Small tick mark
+      ctx.globalAlpha = 0.4;
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(chartWidth + 2, y);
+      ctx.lineTo(chartWidth + 8, y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.7;
+    }
+    
+    // Current price indicator
+    const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
     if (lastCandle) {
       const currentPrice = lastCandle.close;
       const currentPriceY = margin + ((maxPrice - currentPrice) / priceRange) * chartHeight;
       
-      // Current price label with gray background
+      // Current price line across scale
       ctx.globalAlpha = 0.8;
-      ctx.fillStyle = '#666666';
-      ctx.fillRect(width - 75, currentPriceY - 8, 70, 16);
+      ctx.strokeStyle = '#ff6666';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(chartWidth, currentPriceY);
+      ctx.lineTo(chartWidth + scaleWidth, currentPriceY);
+      ctx.stroke();
+      
+      // Current price label with background
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(chartWidth + 2, currentPriceY - 8, scaleWidth - 4, 16);
       
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px JetBrains Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${Math.round(currentPrice).toLocaleString()}`, width - 40, currentPriceY + 3);
+      ctx.fillText(`${Math.round(currentPrice).toLocaleString()}`, chartWidth + scaleWidth/2, currentPriceY + 3);
       
-      // Add live indicator (pulsing dot) next to current price
+      // Add live indicator (pulsing dot)
       const timeSinceUpdate = Date.now() - lastUpdateTime;
       const isRecent = timeSinceUpdate < 20000; // 20 seconds
       if (isRecent) {
-        const alpha = 0.5 + 0.5 * Math.sin(Date.now() * 0.005); // Pulsing effect
+        const alpha = 0.6 + 0.4 * Math.sin(Date.now() * 0.005); // Pulsing effect
         ctx.globalAlpha = alpha;
         ctx.fillStyle = '#00ff88';
         ctx.beginPath();
-        ctx.arc(width - 85, currentPriceY, 3, 0, Math.PI * 2);
+        ctx.arc(chartWidth - 8, currentPriceY, 4, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -1244,11 +1296,11 @@ export function LiquidationCanvas({
     ctx.globalAlpha = 0.4;
     ctx.fillStyle = '#666666';
     ctx.font = '9px JetBrains Mono, monospace';
-    ctx.textAlign = 'right';
+    ctx.textAlign = 'left';
     
     if (lastCandle) {
-      // Show current Bitcoin price in header
-      ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, width - 10, 20);
+      // Show current Bitcoin price in header (left side)
+      ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, 10, 20);
       
       // Add live indicator (pulsing dot) in header
       const timeSinceUpdate = Date.now() - lastUpdateTime;
@@ -1258,13 +1310,13 @@ export function LiquidationCanvas({
         ctx.globalAlpha = alpha;
         ctx.fillStyle = '#00ff88';
         ctx.beginPath();
-        ctx.arc(width - 120, 15, 3, 0, Math.PI * 2);
+        ctx.arc(150, 15, 3, 0, Math.PI * 2);
         ctx.fill();
         
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = '#666666';
-        ctx.textAlign = 'right';
-        ctx.fillText('LIVE', width - 130, 20);
+        ctx.textAlign = 'left';
+        ctx.fillText('LIVE', 160, 20);
       }
     }
     

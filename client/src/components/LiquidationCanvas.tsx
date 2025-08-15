@@ -69,29 +69,29 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     const value = liquidation.value;
     let size;
     
-    // Фиксированная система размеров и скоростей
+    // Фиксированная система размеров и скоростей (увеличенные скорости)
     let baseVelocity;
     if (value < 5000) {
       size = 60; // Очень маленькие
-      baseVelocity = 2.5; // Быстрые
+      baseVelocity = 5.0; // Быстрые
     } else if (value < 15000) {
       size = 80; // Маленькие  
-      baseVelocity = 2.0; // Средне-быстрые
+      baseVelocity = 4.0; // Средне-быстрые
     } else if (value < 50000) {
       size = 100; // Средние
-      baseVelocity = 1.6; // Средние
+      baseVelocity = 3.2; // Средние
     } else if (value < 100000) {
       size = 130; // Средне-большие
-      baseVelocity = 1.3; // Средне-медленные
+      baseVelocity = 2.5; // Средне-медленные
     } else if (value < 500000) {
       size = 160; // Большие
-      baseVelocity = 1.0; // Медленные
+      baseVelocity = 2.0; // Медленные
     } else if (value < 1000000) {
       size = 200; // Очень большие
-      baseVelocity = 0.8; // Очень медленные
+      baseVelocity = 1.5; // Очень медленные
     } else {
       size = 250; // Огромные
-      baseVelocity = 0.6; // Самые медленные
+      baseVelocity = 1.2; // Самые медленные
     }
 
     console.log(`Liquidation: $${value.toFixed(0)} -> Size: ${size}px, Speed: ${baseVelocity.toFixed(2)}`);;
@@ -373,7 +373,6 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     const state = animationStateRef.current;
     const deltaTime = currentTime - state.lastTime;
     state.lastTime = currentTime;
-    state.animationSpeed = animationSpeed;
     state.isPaused = isPaused;
 
     if (!isPaused) {

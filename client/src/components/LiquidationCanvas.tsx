@@ -86,9 +86,11 @@ export function LiquidationCanvas({
         // When page becomes visible, update the last visible time
         lastVisibleTime.current = Date.now();
         
-        // Clear old processed liquidations to allow fresh start
-        const currentTime = Date.now();
-        processedLiquidations.current.clear();
+        // Don't clear processed liquidations to prevent duplicates
+        // Just clear existing animations that might have accumulated
+        const state = animationStateRef.current;
+        state.liquidations = [];
+        state.particles = [];
         
         console.log('Page visible - cleared accumulated liquidations');
       }
@@ -826,15 +828,18 @@ export function LiquidationCanvas({
         return;
       }
       
+      // Create unique identifier including timestamp and value to prevent duplicates
+      const uniqueKey = `${liquidation.id}_${liquidation.timestamp}_${liquidation.value}`;
+      
       // Check if already processed
-      if (!processedLiquidations.current.has(liquidation.id)) {
+      if (!processedLiquidations.current.has(uniqueKey)) {
         // Check if already exists in current animation
         const exists = state.liquidations.some(block => block.id === liquidation.id);
         if (!exists) {
           try {
             const block = createLiquidationBlock(liquidation);
             state.liquidations.push(block);
-            processedLiquidations.current.add(liquidation.id);
+            processedLiquidations.current.add(uniqueKey);
             
             // Keep processed set manageable (remove old entries)
             if (processedLiquidations.current.size > 1000) {

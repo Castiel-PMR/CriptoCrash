@@ -72,33 +72,59 @@ export function LiquidationCanvas({
   const [isFlashing, setIsFlashing] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
 
+  // Audio context ref for consistent sound
+  const audioContextRef = useRef<AudioContext | null>(null);
+  
+  // Initialize audio context on first user interaction
+  const initAudioContext = useCallback(() => {
+    if (!audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      } catch (error) {
+        console.log('Audio not supported');
+      }
+    }
+  }, []);
+
   // Laser sound effect
   const playLaserSound = useCallback((isLeftCannon: boolean) => {
+    console.log('Laser sound called, muted:', isSoundMuted);
     if (isSoundMuted) return; // Skip sound if muted
     
+    // Initialize audio context if needed
+    if (!audioContextRef.current) {
+      initAudioContext();
+    }
+    
+    if (!audioContextRef.current) return;
+    
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
+      // Resume context if suspended (browser autoplay policy)
+      if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+      
+      const oscillator = audioContextRef.current.createOscillator();
+      const gainNode = audioContextRef.current.createGain();
       
       oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      gainNode.connect(audioContextRef.current.destination);
       
       // Different frequencies for different cannons
       const frequency = isLeftCannon ? 800 : 600; // Higher pitch for left (blue), lower for right (red)
-      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.3, audioContext.currentTime + 0.15);
+      oscillator.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.3, audioContextRef.current.currentTime + 0.15);
       
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+      gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.15);
       
       oscillator.type = 'sawtooth';
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.15);
+      oscillator.start(audioContextRef.current.currentTime);
+      oscillator.stop(audioContextRef.current.currentTime + 0.15);
     } catch (error) {
-      // Silent fail if audio context not supported
+      console.log('Audio playback failed:', error);
     }
-  }, [isSoundMuted]);
+  }, [isSoundMuted, initAudioContext]);
 
   // Effect for text flashing animation
   useEffect(() => {
@@ -364,6 +390,9 @@ export function LiquidationCanvas({
   const handleCanvasClick = useCallback((e: MouseEvent) => {
     if (!canvasRef.current) return;
     
+    // Initialize audio context on first user interaction
+    initAudioContext();
+    
     const rect = canvasRef.current.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
@@ -412,7 +441,7 @@ export function LiquidationCanvas({
         break; // Only explode one bag per click
       }
     }
-  }, [createClickParticle, isSoundMuted]);
+  }, [createClickParticle, isSoundMuted, initAudioContext]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

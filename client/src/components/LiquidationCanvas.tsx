@@ -685,7 +685,7 @@ export function LiquidationCanvas({
       if (isGreen) {
         // Light gray for up candles - filled with background color
         ctx.strokeStyle = '#888888';
-        ctx.fillStyle = '#1a1a1a'; // Цвет фона графика
+        ctx.fillStyle = '#0a0a0a'; // Цвет фона графика
       } else {
         // Dark gray for down candles - filled
         ctx.fillStyle = '#333333';
@@ -706,7 +706,7 @@ export function LiquidationCanvas({
       // Reset stroke and fill colors for body
       if (isGreen) {
         ctx.strokeStyle = '#888888';
-        ctx.fillStyle = '#1a1a1a'; // Цвет фона графика
+        ctx.fillStyle = '#0a0a0a'; // Цвет фона графика
       } else {
         ctx.fillStyle = '#333333';
         ctx.strokeStyle = '#333333';

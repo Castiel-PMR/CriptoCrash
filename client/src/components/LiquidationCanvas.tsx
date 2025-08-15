@@ -443,7 +443,16 @@ export function LiquidationCanvas({
     
     // Removed dollar sign for better coin symbol and amount readability
 
-    // Amount text with outline for better readability
+    // Coin symbol with outline (top position)
+    const coinFontSize = Math.max(10, bagWidth * 0.12);
+    ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 2;
+    ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText(block.coin, 0, -bagHeight * 0.1);
+
+    // Amount text with outline for better readability (center position)
     const amountFontSize = Math.max(12, bagWidth * 0.15);
     ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
     let formattedAmount;
@@ -456,18 +465,9 @@ export function LiquidationCanvas({
     }
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    ctx.strokeText(formattedAmount, 0, bagHeight * 0.3);
+    ctx.strokeText(formattedAmount, 0, bagHeight * 0.1);
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(formattedAmount, 0, bagHeight * 0.3);
-
-    // Coin symbol with outline
-    const coinFontSize = Math.max(10, bagWidth * 0.12);
-    ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
-    ctx.fillStyle = '#FFD700';
-    ctx.fillText(block.coin, 0, -bagHeight * 0.1);
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.1);
 
     ctx.restore();
   }, []);

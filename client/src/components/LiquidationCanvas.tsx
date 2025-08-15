@@ -43,6 +43,10 @@ export function LiquidationCanvas({
       fireProgress: 0,
       targetBag: null,
       side: 'left',
+      movingRight: true,
+      speed: 0.3,
+      minX: 30,
+      maxX: 200,
     },
     rightCannon: {
       x: 0, // Will be set when canvas is available
@@ -86,9 +90,8 @@ export function LiquidationCanvas({
     }
   }, []);
 
-  // Laser sound effect
-  const playLaserSound = useCallback((isLeftCannon: boolean) => {
-    console.log('Laser sound called, muted:', isSoundMuted);
+  // Cannon sound effect
+  const playCannonSound = useCallback((isLeftCannon: boolean) => {
     if (isSoundMuted) return; // Skip sound if muted
     
     // Initialize audio context if needed
@@ -104,23 +107,36 @@ export function LiquidationCanvas({
         audioContextRef.current.resume();
       }
       
-      const oscillator = audioContextRef.current.createOscillator();
+      // Create a realistic cannon boom sound
       const gainNode = audioContextRef.current.createGain();
+      const oscillator1 = audioContextRef.current.createOscillator();
+      const oscillator2 = audioContextRef.current.createOscillator();
       
-      oscillator.connect(gainNode);
+      // Deep boom base frequency
+      oscillator1.type = 'triangle';
+      oscillator1.frequency.setValueAtTime(60, audioContextRef.current.currentTime);
+      oscillator1.frequency.exponentialRampToValueAtTime(30, audioContextRef.current.currentTime + 0.5);
+      
+      // Higher frequency for crack/snap
+      oscillator2.type = 'square';
+      oscillator2.frequency.setValueAtTime(400, audioContextRef.current.currentTime);
+      oscillator2.frequency.exponentialRampToValueAtTime(50, audioContextRef.current.currentTime + 0.2);
+      
+      // Volume envelope - sharp attack, slow decay
+      gainNode.gain.setValueAtTime(0, audioContextRef.current.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioContextRef.current.currentTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.1, audioContextRef.current.currentTime + 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContextRef.current.currentTime + 0.8);
+      
+      // Connect both oscillators
+      oscillator1.connect(gainNode);
+      oscillator2.connect(gainNode);
       gainNode.connect(audioContextRef.current.destination);
       
-      // Different frequencies for different cannons
-      const frequency = isLeftCannon ? 800 : 600; // Higher pitch for left (blue), lower for right (red)
-      oscillator.frequency.setValueAtTime(frequency, audioContextRef.current.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.3, audioContextRef.current.currentTime + 0.15);
-      
-      gainNode.gain.setValueAtTime(0.1, audioContextRef.current.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContextRef.current.currentTime + 0.15);
-      
-      oscillator.type = 'sawtooth';
-      oscillator.start(audioContextRef.current.currentTime);
-      oscillator.stop(audioContextRef.current.currentTime + 0.15);
+      oscillator1.start(audioContextRef.current.currentTime);
+      oscillator2.start(audioContextRef.current.currentTime);
+      oscillator1.stop(audioContextRef.current.currentTime + 0.8);
+      oscillator2.stop(audioContextRef.current.currentTime + 0.2);
     } catch (error) {
       console.log('Audio playback failed:', error);
     }
@@ -399,8 +415,8 @@ export function LiquidationCanvas({
     
     // Check if click is on mute button (bottom right corner)
     const buttonSize = 40;
-    const buttonX = canvasRef.current.width - buttonSize - 10;
-    const buttonY = canvasRef.current.height - buttonSize - 10;
+    const buttonX = canvasRef.current.width - buttonSize - 15;
+    const buttonY = canvasRef.current.height - buttonSize - 15;
     
     if (clickX >= buttonX && clickX <= buttonX + buttonSize && 
         clickY >= buttonY && clickY <= buttonY + buttonSize) {
@@ -509,8 +525,8 @@ export function LiquidationCanvas({
           life: 300,
         });
         
-        // Play laser sound effect
-        playLaserSound(activeCannon.side === 'left');
+        // Play cannon sound effect
+        playCannonSound(activeCannon.side === 'left');
       }
     }
 
@@ -568,7 +584,7 @@ export function LiquidationCanvas({
     }
 
     return block.y < canvas.height + block.height;
-  }, [createParticle, playLaserSound]);
+  }, [createParticle, playCannonSound]);
 
   // Update particle
   const updateParticle = useCallback((particle: Particle, deltaTime: number): boolean => {
@@ -586,9 +602,22 @@ export function LiquidationCanvas({
   const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
     const state = animationStateRef.current;
     
-    // Position left cannon only (slightly raised from bottom)
-    state.leftCannon.x = 40;
-    state.leftCannon.y = canvasHeight - 40;
+    // Move cannon horizontally along bottom border
+    const frameMultiplier = deltaTime / 16.67;
+    if (state.leftCannon.movingRight) {
+      state.leftCannon.x += (state.leftCannon.speed || 0.3) * frameMultiplier;
+      if (state.leftCannon.x >= (state.leftCannon.maxX || 200)) {
+        state.leftCannon.movingRight = false;
+      }
+    } else {
+      state.leftCannon.x -= (state.leftCannon.speed || 0.3) * frameMultiplier;
+      if (state.leftCannon.x <= (state.leftCannon.minX || 30)) {
+        state.leftCannon.movingRight = true;
+      }
+    }
+    
+    // Position cannon slightly raised from bottom
+    state.leftCannon.y = canvasHeight - 50;
     
     // Update firing animation for left cannon only
     if (state.leftCannon.isFiring) {
@@ -811,184 +840,150 @@ export function LiquidationCanvas({
     ctx.restore();
   }, []);
 
-  // Draw cannon in Napoleon style
+  // Draw cannon in historical 17-18 century style
   const drawCannon = useCallback((ctx: CanvasRenderingContext2D, cannon: Cannon) => {
     ctx.save();
     ctx.translate(cannon.x, cannon.y);
     
-    // Mirror right cannon horizontally
-    if (cannon.side === 'right') {
-      ctx.scale(-1, 1);
-    }
+    // Base wooden carriage platform 
+    const woodGradient = ctx.createLinearGradient(0, 10, 0, 35);
+    woodGradient.addColorStop(0, '#8B4513');
+    woodGradient.addColorStop(0.5, '#A0522D');
+    woodGradient.addColorStop(1, '#654321');
     
-    // Tripod legs (three legs extending outward)
-    const legGradient = ctx.createLinearGradient(0, 0, 0, 25);
-    legGradient.addColorStop(0, '#4a5568');
-    legGradient.addColorStop(1, '#2d3748');
+    ctx.fillStyle = woodGradient;
+    ctx.fillRect(-35, 10, 70, 25);
     
-    ctx.fillStyle = legGradient;
-    ctx.strokeStyle = '#6b7280';
+    // Wood grain texture
+    ctx.strokeStyle = '#654321';
     ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.6;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-30, 15 + i * 5);
+      ctx.lineTo(30, 15 + i * 5);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
     
-    // Left leg
-    ctx.save();
-    ctx.rotate(-Math.PI / 6);
-    ctx.fillRect(-2, 0, 4, 25);
-    ctx.strokeRect(-2, 0, 4, 25);
-    ctx.restore();
+    // Large wooden wheels
+    const wheelGradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 15);
+    wheelGradient.addColorStop(0, '#8B4513');
+    wheelGradient.addColorStop(1, '#654321');
     
-    // Right leg  
-    ctx.save();
-    ctx.rotate(Math.PI / 6);
-    ctx.fillRect(-2, 0, 4, 25);
-    ctx.strokeRect(-2, 0, 4, 25);
-    ctx.restore();
-    
-    // Back leg
-    ctx.save();
-    ctx.rotate(Math.PI);
-    ctx.fillRect(-2, 0, 4, 25);
-    ctx.strokeRect(-2, 0, 4, 25);
-    ctx.restore();
-    
-    // Base platform (wider cylinder)
-    const baseGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-    baseGradient.addColorStop(0, '#4a5568');
-    baseGradient.addColorStop(0.8, '#374151');
-    baseGradient.addColorStop(1, '#1f2937');
-    
-    ctx.fillStyle = baseGradient;
+    // Left wheel
+    ctx.fillStyle = wheelGradient;
     ctx.beginPath();
-    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.arc(-25, 35, 15, 0, Math.PI * 2);
     ctx.fill();
     
-    ctx.strokeStyle = '#6b7280';
-    ctx.lineWidth = 1;
+    // Right wheel  
     ctx.beginPath();
-    ctx.arc(0, 0, 15, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.arc(25, 35, 15, 0, Math.PI * 2);
+    ctx.fill();
     
-    // Turret head (upper rotating part)
-    const turretGradient = ctx.createLinearGradient(-8, -8, 8, 8);
-    turretGradient.addColorStop(0, '#6b7280');
-    turretGradient.addColorStop(0.5, '#4a5568');
-    turretGradient.addColorStop(1, '#374151');
-    
-    ctx.fillStyle = turretGradient;
-    ctx.fillRect(-8, -8, 16, 10);
-    
-    // Turret outline
-    ctx.strokeStyle = '#9ca3af';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(-8, -8, 16, 10);
-    
-    // Detail lines and panels
-    ctx.strokeStyle = '#d1d5db';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(-6, -6);
-    ctx.lineTo(6, -6);
-    ctx.moveTo(-6, -4);
-    ctx.lineTo(6, -4);
-    ctx.stroke();
-    
-    // Sight/sensor on top
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(-1, -10, 2, 2);
-    ctx.strokeStyle = '#dc2626';
-    ctx.strokeRect(-1, -10, 2, 2);
-    
-    // Long turret cannon barrel like in the image
-    const barrelLength = 55; // Longer barrel like in image
-    let barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 8; // Slight upward angle
-    
-    // Adjust angle for mirrored right cannon
-    if (cannon.side === 'right') {
-      barrelAngle = cannon.isFiring ? -cannon.angle : -Math.PI / 8;
+    // Wheel spokes (8 spokes each)
+    ctx.strokeStyle = '#4A2C17';
+    ctx.lineWidth = 2;
+    for (let wheel of [-25, 25]) {
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4;
+        ctx.beginPath();
+        ctx.moveTo(wheel, 35);
+        ctx.lineTo(wheel + Math.cos(angle) * 12, 35 + Math.sin(angle) * 12);
+        ctx.stroke();
+      }
+      
+      // Hub
+      ctx.fillStyle = '#4A2C17';
+      ctx.beginPath();
+      ctx.arc(wheel, 35, 4, 0, Math.PI * 2);
+      ctx.fill();
     }
+    
+    // Cannon trunnions (side mounting points)
+    ctx.fillStyle = '#B8860B';
+    ctx.beginPath();
+    ctx.arc(0, 5, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Barrel rotation based on firing state
+    let barrelAngle = cannon.isFiring ? cannon.angle : 0;
     
     ctx.save();
     ctx.rotate(barrelAngle);
     
-    // Main barrel body
-    const barrelGradient = ctx.createLinearGradient(0, -4, 0, 4);
-    barrelGradient.addColorStop(0, '#6b7280');
-    barrelGradient.addColorStop(0.5, '#4a5568');
-    barrelGradient.addColorStop(1, '#374151');
+    // Main cannon barrel (bronze/brass with historical taper)
+    const barrelGradient = ctx.createLinearGradient(0, -10, 0, 10);
+    barrelGradient.addColorStop(0, '#CD7F32');
+    barrelGradient.addColorStop(0.3, '#DAA520');
+    barrelGradient.addColorStop(0.7, '#B8860B');
+    barrelGradient.addColorStop(1, '#8B6914');
     
     ctx.fillStyle = barrelGradient;
-    ctx.fillRect(0, -4, barrelLength, 8);
     
-    // Barrel outline
-    ctx.strokeStyle = '#9ca3af';
+    // Tapered barrel shape (wider at breech, narrower at muzzle)
+    ctx.beginPath();
+    ctx.moveTo(-5, -10);
+    ctx.lineTo(45, -7);
+    ctx.lineTo(50, -6);
+    ctx.lineTo(50, 6);
+    ctx.lineTo(45, 7);
+    ctx.lineTo(-5, 10);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Reinforcement bands (typical of period cannons)
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(5, -10, 4, 20);
+    ctx.fillRect(20, -9, 3, 18);
+    ctx.fillRect(35, -8, 3, 16);
+    
+    // Decorative moldings
+    ctx.strokeStyle = '#654321';
     ctx.lineWidth = 1;
-    ctx.strokeRect(0, -4, barrelLength, 8);
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(45, -6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, 8);
+    ctx.lineTo(45, 6);
+    ctx.stroke();
     
-    // Cylindrical segments like in the image
-    const segmentGradient = ctx.createLinearGradient(0, -5, 0, 5);
-    segmentGradient.addColorStop(0, '#8b5cf6');
-    segmentGradient.addColorStop(0.5, '#7c3aed');
-    segmentGradient.addColorStop(1, '#6d28d9');
+    // Muzzle end (darker, worn look)
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(47, -6, 3, 12);
     
-    // Draw colored segments (red, gold, purple bands)
-    const segments = [
-      { pos: 8, width: 3, color: '#ef4444' },  // Red band
-      { pos: 15, width: 2, color: '#f59e0b' }, // Gold band  
-      { pos: 25, width: 4, color: '#8b5cf6' }, // Purple band
-      { pos: 35, width: 2, color: '#ef4444' }, // Red band
-      { pos: 42, width: 3, color: '#6b7280' }  // Gray band
-    ];
+    // Touch hole for ignition
+    ctx.fillStyle = '#2F1B14';
+    ctx.beginPath();
+    ctx.arc(-2, 0, 2, 0, Math.PI * 2);
+    ctx.fill();
     
-    segments.forEach(segment => {
-      const segGrad = ctx.createLinearGradient(0, -5, 0, 5);
-      segGrad.addColorStop(0, segment.color);
-      segGrad.addColorStop(0.5, segment.color + '88'); // Semi-transparent
-      segGrad.addColorStop(1, segment.color);
-      
-      ctx.fillStyle = segGrad;
-      ctx.fillRect(segment.pos, -5, segment.width, 10);
-      
-      // Segment outline
-      ctx.strokeStyle = segment.color;
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(segment.pos, -5, segment.width, 10);
-    });
-    
-    // Laser muzzle flash when firing (Star Wars style)
+    // Muzzle flash when firing (orange/yellow period-appropriate flash)
     if (cannon.isFiring && cannon.fireProgress < 0.4) {
-      const laserColor = cannon.side === 'left' ? '#00BFFF' : '#FF0000'; // Blue for left, red for right
-      const glowColor = cannon.side === 'left' ? '#87CEEB' : '#FF6B6B';
+      const flashAlpha = (1 - cannon.fireProgress * 2.5);
       
-      // Outer glow
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 20;
-      ctx.fillStyle = glowColor;
-      ctx.globalAlpha = (1 - cannon.fireProgress * 2.5) * 0.4;
+      // Outer flash
+      ctx.fillStyle = '#FFA500';
+      ctx.globalAlpha = flashAlpha * 0.6;
       ctx.beginPath();
-      ctx.arc(barrelLength + 15, 0, 30, 0, Math.PI * 2);
+      ctx.arc(55, 0, 20, 0, Math.PI * 2);
       ctx.fill();
       
-      // Middle glow
-      ctx.shadowBlur = 10;
-      ctx.globalAlpha = (1 - cannon.fireProgress * 2.5) * 0.7;
+      // Middle flash
+      ctx.fillStyle = '#FF6347';
+      ctx.globalAlpha = flashAlpha * 0.8;
       ctx.beginPath();
-      ctx.arc(barrelLength + 10, 0, 20, 0, Math.PI * 2);
+      ctx.arc(53, 0, 12, 0, Math.PI * 2);
       ctx.fill();
       
-      // Core laser flash
-      ctx.shadowBlur = 5;
-      ctx.fillStyle = laserColor;
-      ctx.globalAlpha = 1 - cannon.fireProgress * 2.5;
+      // Core flash
+      ctx.fillStyle = '#FFFF00';
+      ctx.globalAlpha = flashAlpha;
       ctx.beginPath();
-      ctx.arc(barrelLength + 8, 0, 12, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Bright white center
-      ctx.fillStyle = '#FFFFFF';
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = (1 - cannon.fireProgress * 2.5) * 0.8;
-      ctx.beginPath();
-      ctx.arc(barrelLength + 6, 0, 6, 0, Math.PI * 2);
+      ctx.arc(51, 0, 6, 0, Math.PI * 2);
       ctx.fill();
       
       ctx.globalAlpha = 1;
@@ -999,46 +994,36 @@ export function LiquidationCanvas({
     ctx.restore();
   }, []);
 
-  // Draw laser beam (Star Wars style)
+  // Draw cannonball (historical iron ball)
   const drawCannonball = useCallback((ctx: CanvasRenderingContext2D, ball: Cannonball) => {
     ctx.save();
     
-    // Determine laser color based on cannon side
-    const isLeftCannon = ball.x < window.innerWidth / 2;
-    const laserColor = isLeftCannon ? '#00BFFF' : '#FF0000'; // Blue for left, red for right
-    const glowColor = isLeftCannon ? '#87CEEB' : '#FF6B6B';
+    // Iron cannonball with gradient for 3D effect
+    const ballGradient = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 0, ball.x, ball.y, 6);
+    ballGradient.addColorStop(0, '#8C7853');
+    ballGradient.addColorStop(0.4, '#6B5B73');
+    ballGradient.addColorStop(1, '#2F2F2F');
     
-    // Outer glow
-    ctx.shadowColor = glowColor;
-    ctx.shadowBlur = 15;
-    ctx.fillStyle = glowColor;
-    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = ballGradient;
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 12, 0, Math.PI * 2);
+    ctx.arc(ball.x, ball.y, 6, 0, Math.PI * 2);
     ctx.fill();
     
-    // Middle glow
-    ctx.shadowBlur = 8;
+    // Dark outline for definition
+    ctx.strokeStyle = '#1A1A1A';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Small highlight for metallic sheen
+    ctx.fillStyle = '#C0C0C0';
     ctx.globalAlpha = 0.6;
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
+    ctx.arc(ball.x - 2, ball.y - 2, 2, 0, Math.PI * 2);
     ctx.fill();
     
-    // Core laser beam
-    ctx.shadowBlur = 3;
-    ctx.fillStyle = laserColor;
     ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Bright center
-    ctx.fillStyle = '#FFFFFF';
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 2, 0, Math.PI * 2);
-    ctx.fill();
-    
     ctx.restore();
   }, []);
 
@@ -1271,27 +1256,9 @@ export function LiquidationCanvas({
       updateCannons(canvas.width, canvas.height, deltaTime);
       drawCannon(ctx, state.leftCannon);
       
-      // Draw temporary cannon range indicators (for testing)
+      // Cannon range calculation (invisible)
       const cannonRange = canvas.height * 0.70;
       const bottomLimit = canvas.height * 0.95;
-      
-      // Upper boundary (red)
-      ctx.strokeStyle = '#ff0000';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([10, 5]);
-      ctx.beginPath();
-      ctx.moveTo(0, cannonRange);
-      ctx.lineTo(canvas.width, cannonRange);
-      ctx.stroke();
-      
-      // Lower boundary (orange)
-      ctx.strokeStyle = '#ff8800';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, bottomLimit);
-      ctx.lineTo(canvas.width, bottomLimit);
-      ctx.stroke();
-      ctx.setLineDash([]);
 
       // Update and draw cannonballs
       updateCannonballs(deltaTime);
@@ -1299,25 +1266,38 @@ export function LiquidationCanvas({
         drawCannonball(ctx, ball);
       });
 
-      // Draw mute button in bottom right corner
+      // Draw stylish mute button in bottom right corner
       const buttonSize = 40;
-      const buttonX = canvas.width - buttonSize - 10;
-      const buttonY = canvas.height - buttonSize - 10;
+      const buttonX = canvas.width - buttonSize - 15;
+      const buttonY = canvas.height - buttonSize - 15;
       
-      // Button background
-      ctx.fillStyle = isSoundMuted ? '#ef4444' : '#22c55e';
-      ctx.globalAlpha = 0.8;
-      ctx.fillRect(buttonX, buttonY, buttonSize, buttonSize);
+      // Button background with gradient
+      const gradient = ctx.createRadialGradient(buttonX + buttonSize/2, buttonY + buttonSize/2, 0, buttonX + buttonSize/2, buttonY + buttonSize/2, buttonSize/2);
+      if (isSoundMuted) {
+        gradient.addColorStop(0, '#ff6b6b');
+        gradient.addColorStop(1, '#ee5a52');
+      } else {
+        gradient.addColorStop(0, '#51cf66');
+        gradient.addColorStop(1, '#40c057');
+      }
       
-      // Button border
-      ctx.strokeStyle = '#ffffff';
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.roundRect(buttonX, buttonY, buttonSize, buttonSize, 8);
+      ctx.fill();
+      
+      // Border with cyber theme
+      ctx.strokeStyle = isSoundMuted ? '#ff9999' : '#69db7c';
       ctx.lineWidth = 2;
       ctx.globalAlpha = 1;
-      ctx.strokeRect(buttonX, buttonY, buttonSize, buttonSize);
+      ctx.beginPath();
+      ctx.roundRect(buttonX, buttonY, buttonSize, buttonSize, 8);
+      ctx.stroke();
       
       // Speaker icon
       ctx.fillStyle = '#ffffff';
-      ctx.font = '20px Arial';
+      ctx.font = 'bold 16px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(isSoundMuted ? '🔇' : '🔊', buttonX + buttonSize/2, buttonY + buttonSize/2);

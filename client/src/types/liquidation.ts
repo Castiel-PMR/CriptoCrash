@@ -38,6 +38,10 @@ export interface Cannon {
   fireProgress: number;
   targetBag: string | null;
   side: 'left' | 'right';
+  movingRight?: boolean;
+  speed?: number;
+  minX?: number;
+  maxX?: number;
 }
 
 export interface Cannonball {

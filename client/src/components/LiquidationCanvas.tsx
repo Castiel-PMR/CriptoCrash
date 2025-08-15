@@ -352,8 +352,8 @@ export function LiquidationCanvas({
       return block.explosionTime < 500;
     }
 
-    // Постоянная физика с базовой скоростью мешочка
-    block.y += block.velocity; // Используем базовую скорость мешочка
+    // Постоянная физика с базовой скоростью мешочка (независимо от FPS)
+    block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
     // Check if hit bottom
@@ -378,12 +378,13 @@ export function LiquidationCanvas({
   }, [createParticle]);
 
   // Update particle
-  const updateParticle = useCallback((particle: Particle): boolean => {
-    particle.x += particle.vx;
-    particle.y += particle.vy;
-    particle.vy += 0.1; // Gravity
-    particle.life -= particle.decay;
-    particle.size *= 0.98;
+  const updateParticle = useCallback((particle: Particle, deltaTime: number): boolean => {
+    const frameMultiplier = deltaTime / 16.67; // Нормализуем к 60 FPS
+    particle.x += particle.vx * frameMultiplier;
+    particle.y += particle.vy * frameMultiplier;
+    particle.vy += 0.1 * frameMultiplier; // Gravity
+    particle.life -= particle.decay * frameMultiplier;
+    particle.size *= Math.pow(0.98, frameMultiplier);
     
     return particle.life > 0;
   }, []);
@@ -791,7 +792,7 @@ export function LiquidationCanvas({
 
       // Update and draw particles
       state.particles = state.particles.filter(particle => {
-        const alive = updateParticle(particle);
+        const alive = updateParticle(particle, deltaTime);
         if (alive) {
           drawParticle(ctx, particle);
         }

@@ -155,14 +155,19 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
     
+    console.log(`Click at: ${clickX}, ${clickY}. Active bags: ${animationStateRef.current.liquidations.length}`);
+    
     const state = animationStateRef.current;
     
     // Check if click hit any money bag
     for (let i = 0; i < state.liquidations.length; i++) {
       const bag = state.liquidations[i];
       
-      // Расширенная зона клика (на 20px больше со всех сторон)
-      const clickPadding = 20;
+      // Расширенная зона клика (на 40px больше со всех сторон)
+      const clickPadding = 40;
+      
+      console.log(`Bag ${i}: position ${bag.x}, ${bag.y}, size ${bag.width}x${bag.height}`);
+      
       if (!bag.isExploding && 
           clickX >= bag.x - clickPadding && clickX <= bag.x + bag.width + clickPadding &&
           clickY >= bag.y - clickPadding && clickY <= bag.y + bag.height + clickPadding) {

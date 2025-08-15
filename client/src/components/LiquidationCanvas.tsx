@@ -1269,11 +1269,8 @@ export function LiquidationCanvas({
       ctx.lineTo(chartWidth + scaleWidth, currentPriceY);
       ctx.stroke();
       
-      // Current price label with background
+      // Current price label without red background - just the text
       ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#ff6666';
-      ctx.fillRect(chartWidth + 2, currentPriceY - 8, scaleWidth - 4, 16);
-      
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px JetBrains Mono, monospace';
       ctx.textAlign = 'center';
@@ -1484,7 +1481,7 @@ export function LiquidationCanvas({
       />
       
       {/* Timeframe Selector */}
-      <div className="absolute top-4 left-4 z-10">
+      <div className="absolute top-4 right-4 z-10">
         <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-2">
           <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
           {timeframeOptions.map((tf) => (

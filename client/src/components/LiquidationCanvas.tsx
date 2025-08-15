@@ -424,7 +424,7 @@ export function LiquidationCanvas({
     block.rotation += block.rotationSpeed;
 
     // Check if bag is in cannon's destruction range (from bottom to middle-lower part)
-    const cannonRange = canvas.height * 0.75; // Range from bottom to 75% of screen height (gives chance for manual destruction)
+    const cannonRange = canvas.height * 0.70; // Range from bottom to 70% of screen height (gives chance for manual destruction)
     const bottomLimit = canvas.height * 0.95; // Don't let bags reach the very bottom
     
     // Fire at random positions within the cannon range, not immediately at crossing
@@ -1185,7 +1185,7 @@ export function LiquidationCanvas({
       drawCannon(ctx, state.leftCannon);
       
       // Draw temporary cannon range indicators (for testing)
-      const cannonRange = canvas.height * 0.75;
+      const cannonRange = canvas.height * 0.70;
       const bottomLimit = canvas.height * 0.95;
       
       // Upper boundary (red)

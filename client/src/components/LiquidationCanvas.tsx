@@ -595,20 +595,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
 
   // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    console.log('drawBitcoinChart called, candles:', bitcoinCandles.length);
-    
-    // Always draw test rectangle first to verify function is being called
-    ctx.save();
-    ctx.globalAlpha = 0.8;
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(10, 10, 100, 50);
-    ctx.fillText('TEST', 20, 35);
-    ctx.restore();
-    
-    if (bitcoinCandles.length === 0) {
-      console.log('No bitcoin candles data, exiting');
-      return;
-    }
+    if (bitcoinCandles.length === 0) return;
     
     // Find min/max prices from all candles
     const allPrices = bitcoinCandles.flatMap(candle => [candle.high, candle.low]);
@@ -643,30 +630,30 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       ctx.stroke();
     }
     
-    // Now draw candlesticks with higher visibility
-    ctx.globalAlpha = 0.6;
+    // Draw bright candlesticks for visibility
+    ctx.globalAlpha = 0.7;
     
-    const candleWidth = Math.max(6, width / bitcoinCandles.length * 0.7);
+    const candleWidth = Math.max(8, width / bitcoinCandles.length * 0.8);
     const candleSpacing = width / bitcoinCandles.length;
     
     bitcoinCandles.forEach((candle, index) => {
       const x = (index + 0.5) * candleSpacing;
       
-      // Scale prices to canvas with proper margins
-      const margin = height * 0.1;
+      // Scale prices to canvas
+      const margin = height * 0.05;
       const chartHeight = height - 2 * margin;
       
-      const openY = margin + (1 - (candle.open - minPrice) / priceRange) * chartHeight;
-      const closeY = margin + (1 - (candle.close - minPrice) / priceRange) * chartHeight;
-      const highY = margin + (1 - (candle.high - minPrice) / priceRange) * chartHeight;
-      const lowY = margin + (1 - (candle.low - minPrice) / priceRange) * chartHeight;
+      const openY = margin + ((maxPrice - candle.open) / priceRange) * chartHeight;
+      const closeY = margin + ((maxPrice - candle.close) / priceRange) * chartHeight;
+      const highY = margin + ((maxPrice - candle.high) / priceRange) * chartHeight;
+      const lowY = margin + ((maxPrice - candle.low) / priceRange) * chartHeight;
       
-      // Determine candle color
+      // Visible but subtle colors for background chart
       const isGreen = candle.close >= candle.open;
-      ctx.fillStyle = isGreen ? '#4caf50' : '#f44336';
-      ctx.strokeStyle = isGreen ? '#4caf50' : '#f44336';
+      ctx.fillStyle = isGreen ? '#26a69a' : '#ef5350';
+      ctx.strokeStyle = isGreen ? '#26a69a' : '#ef5350';
       
-      // Draw high-low line (wick)
+      // Draw wick (high-low line)
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(x, highY);
@@ -675,18 +662,21 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       
       // Draw candle body
       const bodyTop = Math.min(openY, closeY);
-      const bodyHeight = Math.max(2, Math.abs(closeY - openY));
+      const bodyHeight = Math.max(3, Math.abs(closeY - openY));
       
-      if (bodyHeight < 4) {
-        // Doji candle - horizontal line
-        ctx.lineWidth = 2;
+      if (bodyHeight < 5) {
+        // Doji - thick horizontal line
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(x - candleWidth/2, openY);
         ctx.lineTo(x + candleWidth/2, openY);
         ctx.stroke();
       } else {
-        // Regular candle body
+        // Normal candle body
         ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
+        // Add outline for better definition
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
       }
     });
     
@@ -726,7 +716,6 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Draw Bitcoin chart background (dimmed)
-      console.log('About to call drawBitcoinChart, canvas size:', canvas.width, canvas.height);
       drawBitcoinChart(ctx, canvas.width, canvas.height);
 
 

@@ -392,134 +392,117 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Draw realistic dollar bill banknote
+  // Draw money bag with improved text readability
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
     ctx.save();
     ctx.globalAlpha = block.opacity;
     ctx.translate(block.x + block.width / 2, block.y + block.height / 2);
-    ctx.rotate(block.rotation);
 
-    const billWidth = block.width * 1.4;  // Bills are wider than tall
-    const billHeight = block.height * 0.7;
+    const bagWidth = block.width;
+    const bagHeight = block.height;
+    const neckHeight = bagHeight * 0.15;
     
     // Drop shadow for depth
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 3;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
     ctx.shadowOffsetY = 3;
     
-    // Main bill body with rounded corners
+    // Main bag body (rounded rectangle)
     ctx.beginPath();
-    ctx.roundRect(-billWidth/2, -billHeight/2, billWidth, billHeight, 8);
+    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.1);
     
-    // Enhanced gradient based on liquidation type
-    const gradient = ctx.createLinearGradient(-billWidth/2, -billHeight/2, billWidth/2, billHeight/2);
+    // Enhanced gradient fill
+    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bagWidth/2);
     if (block.isLong) {
-      // Red banknote for long liquidations
-      gradient.addColorStop(0, '#FF6B6B');
-      gradient.addColorStop(0.3, '#E85A5A'); 
-      gradient.addColorStop(0.7, '#D14444');
-      gradient.addColorStop(1, '#B73E3E');
+      gradient.addColorStop(0, '#CD853F'); // Lighter brown
+      gradient.addColorStop(0.5, '#8B4513'); // Brown for long liquidations
+      gradient.addColorStop(0.8, '#654321');
+      gradient.addColorStop(1, '#3C2415');
     } else {
-      // Green banknote for short liquidations  
-      gradient.addColorStop(0, '#4ECDC4');
-      gradient.addColorStop(0.3, '#45B7AF');
-      gradient.addColorStop(0.7, '#3DA499');
-      gradient.addColorStop(1, '#359388');
+      gradient.addColorStop(0, '#32CD32'); // Lighter green
+      gradient.addColorStop(0.5, '#228B22'); // Green for short liquidations
+      gradient.addColorStop(0.8, '#1F5F1F');
+      gradient.addColorStop(1, '#0D2B0D');
     }
     
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    // Bill border
+    // Bag neck/tie
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = block.isLong ? '#8B0000' : '#006666';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    
-    // Inner decorative border
     ctx.beginPath();
-    ctx.roundRect(-billWidth/2 + 8, -billHeight/2 + 6, billWidth - 16, billHeight - 12, 4);
-    ctx.strokeStyle = block.isLong ? 'rgba(139, 0, 0, 0.6)' : 'rgba(0, 102, 102, 0.6)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    
-    // Decorative corner circles
-    const cornerRadius = billHeight * 0.12;
-    const cornerOffset = billWidth * 0.35;
-    
-    // Top corners
-    ctx.beginPath();
-    ctx.arc(-cornerOffset, -billHeight/2 + cornerRadius + 6, cornerRadius, 0, Math.PI * 2);
-    ctx.arc(cornerOffset, -billHeight/2 + cornerRadius + 6, cornerRadius, 0, Math.PI * 2);
-    ctx.arc(-cornerOffset, billHeight/2 - cornerRadius - 6, cornerRadius, 0, Math.PI * 2);
-    ctx.arc(cornerOffset, billHeight/2 - cornerRadius - 6, cornerRadius, 0, Math.PI * 2);
-    
-    ctx.fillStyle = block.isLong ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.15)';
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.3, neckHeight, 0, 0, Math.PI * 2);
+    ctx.fillStyle = block.isLong ? '#654321' : '#1F5F1F';
     ctx.fill();
     
-    // Central ornamental pattern
-    ctx.strokeStyle = block.isLong ? 'rgba(139, 0, 0, 0.4)' : 'rgba(0, 102, 102, 0.4)';
-    ctx.lineWidth = 1;
-    
-    // Vertical lines pattern
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      const lineX = i * billWidth / 12;
-      ctx.moveTo(lineX, -billHeight/4);
-      ctx.lineTo(lineX, billHeight/4);
-      ctx.stroke();
-    }
-    
-    // Text styling
+    // Rope/string on neck
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.32, neckHeight * 1.1, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Enhanced text with maximum readability
+    ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Large denomination number (like $100 on dollar bill)
-    const denominationSize = Math.max(16, billWidth * 0.15);
-    ctx.font = `bold ${denominationSize}px serif`;
+    // Coin symbol with high contrast and glow
+    const coinFontSize = Math.max(14, bagWidth * 0.18);
+    ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
     
-    // White glow for denomination
+    // Strong white background for coin text
     ctx.shadowColor = '#FFFFFF';
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = 8;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(block.coin, -billWidth/3, -billHeight/6);
+    ctx.fillText(block.coin, 0, -bagHeight * 0.05);
     
-    // Dark outline for denomination
+    // Multiple stroke layers for maximum contrast
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = block.isLong ? '#8B0000' : '#006666';
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(block.coin, 0, -bagHeight * 0.05);
+    
+    ctx.strokeStyle = block.isLong ? '#8B4513' : '#228B22';
     ctx.lineWidth = 2;
-    ctx.strokeText(block.coin, -billWidth/3, -billHeight/6);
+    ctx.strokeText(block.coin, 0, -bagHeight * 0.05);
+    
+    // Final white fill
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(block.coin, 0, -bagHeight * 0.05);
 
-    // Amount text in elegant serif font
-    const amountFontSize = Math.max(12, billWidth * 0.12);
-    ctx.font = `bold ${amountFontSize}px serif`;
+    // Amount text with maximum readability
+    const amountFontSize = Math.max(12, bagWidth * 0.16);
+    ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
     let formattedAmount;
     if (block.amount >= 1000000) {
-      formattedAmount = '$' + (block.amount / 1000000).toFixed(1) + 'M';
+      formattedAmount = (block.amount / 1000000).toFixed(1) + 'M';
     } else if (block.amount >= 1000) {
-      formattedAmount = '$' + (block.amount / 1000).toFixed(0) + 'K';
+      formattedAmount = (block.amount / 1000).toFixed(0) + 'K';
     } else {
-      formattedAmount = '$' + block.amount.toFixed(0);
+      formattedAmount = block.amount.toFixed(0);
     }
     
-    // Amount with glow
+    // Strong white glow for amount
     ctx.shadowColor = '#FFFFFF';
-    ctx.shadowBlur = 3;
+    ctx.shadowBlur = 8;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(formattedAmount, billWidth/4, billHeight/4);
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
     
-    // Amount outline
+    // Multiple stroke layers for contrast
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = block.isLong ? '#8B0000' : '#006666';
-    ctx.lineWidth = 1.5;
-    ctx.strokeText(formattedAmount, billWidth/4, billHeight/4);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.strokeText(formattedAmount, 0, bagHeight * 0.25);
     
-    // Small decorative "LIQUIDATION" text
-    const smallFontSize = Math.max(6, billWidth * 0.06);
-    ctx.font = `${smallFontSize}px serif`;
-    ctx.fillStyle = block.isLong ? 'rgba(139, 0, 0, 0.8)' : 'rgba(0, 102, 102, 0.8)';
-    ctx.fillText('LIQUIDATION', 0, billHeight/3);
+    ctx.strokeStyle = block.isLong ? '#8B4513' : '#228B22';
+    ctx.lineWidth = 2;
+    ctx.strokeText(formattedAmount, 0, bagHeight * 0.25);
+    
+    // Final bright white fill
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
 
     ctx.restore();
   }, []);

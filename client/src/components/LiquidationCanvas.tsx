@@ -565,6 +565,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
         
         setBitcoinCandles(candles);
         console.log('Загружены реальные данные Bitcoin:', candles.length, 'свечей');
+        console.log('Первая свеча:', candles[0]);
+        console.log('Последняя свеча:', candles[candles.length - 1]);
       } catch (error) {
         console.error('Ошибка загрузки данных Bitcoin:', error);
         // Fallback to previous static data if API fails
@@ -592,14 +594,14 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     return () => clearInterval(interval);
   }, []);
 
-  // Draw real Bitcoin candlestick chart background
+  // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     if (bitcoinCandles.length === 0) return;
     
     ctx.save();
     
-    // Very dim background for the chart
-    ctx.globalAlpha = 0.12;
+    // More visible but still dim background for the chart
+    ctx.globalAlpha = 0.25;
     
     // Find min/max prices from all candles
     const allPrices = bitcoinCandles.flatMap(candle => [candle.high, candle.low]);
@@ -630,7 +632,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     }
     
     // Draw Japanese candlesticks
-    const candleWidth = width / bitcoinCandles.length * 0.7; // 70% width for candles
+    const candleWidth = Math.max(2, width / bitcoinCandles.length * 0.6); // At least 2px wide
     const candleSpacing = width / bitcoinCandles.length;
     
     bitcoinCandles.forEach((candle, index) => {
@@ -644,8 +646,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       
       // Determine candle color (green if close > open, red if close < open)
       const isGreen = candle.close >= candle.open;
-      ctx.fillStyle = isGreen ? '#00ff7f' : '#ff4757';
-      ctx.strokeStyle = isGreen ? '#00ff7f' : '#ff4757';
+      ctx.fillStyle = isGreen ? '#26a69a' : '#ef5350';
+      ctx.strokeStyle = isGreen ? '#26a69a' : '#ef5350';
       
       // Draw high-low line (wick)
       ctx.lineWidth = 1;

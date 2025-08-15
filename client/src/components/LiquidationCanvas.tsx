@@ -478,17 +478,20 @@ export function LiquidationCanvas({
           // Remove the cannonball
           state.cannonballs.splice(i, 1);
           
-          // Use same explosion as mouse click
+          // Use same explosion as mouse click with random type
+          const explosionType = Math.floor(Math.random() * 10) + 1;
           block.isExploding = true;
           block.explosionTime = 0;
+          block.explosionType = explosionType;
           
-          // Create particles with same count as click explosion
+          // Create particles with same count as click explosion using random explosion type
           const particleCount = Math.min(50, Math.floor(block.width / 2) + 10);
           for (let j = 0; j < particleCount; j++) {
-            state.particles.push(createParticle(
+            state.particles.push(createClickParticle(
               block.x + block.width / 2,
               block.y + block.height / 2,
-              block.isLong
+              block.isLong,
+              explosionType
             ));
           }
           

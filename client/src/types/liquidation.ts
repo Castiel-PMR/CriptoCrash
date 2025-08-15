@@ -14,6 +14,7 @@ export interface LiquidationBlock {
   opacity: number;
   isExploding: boolean;
   explosionTime: number;
+  explosionType?: number;
   isCaught: boolean;
 }
 

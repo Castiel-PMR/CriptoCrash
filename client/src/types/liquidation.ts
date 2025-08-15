@@ -29,15 +29,14 @@ export interface Particle {
   size: number;
 }
 
-export interface FireParticle {
+export interface Robot {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  maxLife: number;
-  size: number;
-  heat: number;
+  targetX: number;
+  isActive: boolean;
+  isSwinging: boolean;
+  swingProgress: number;
+  targetBag: string | null;
 }
 
 export interface AnimationState {

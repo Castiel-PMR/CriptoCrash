@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Liquidation, Platform } from '@shared/schema';
-import { LiquidationBlock, Particle, AnimationState, FireParticle } from '../types/liquidation';
+import { LiquidationBlock, Particle, AnimationState, Robot } from '../types/liquidation';
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
@@ -10,7 +10,7 @@ interface LiquidationCanvasProps {
 
 interface ExtendedAnimationState extends AnimationState {
   platform: Platform;
-  fireParticles: FireParticle[];
+  robot: Robot;
 }
 
 export function LiquidationCanvas({ 
@@ -33,7 +33,15 @@ export function LiquidationCanvas({
       score: 0,
       totalCaught: 0,
     },
-    fireParticles: [],
+    robot: {
+      x: -100, // Start off-screen
+      y: 0,
+      targetX: -100,
+      isActive: false,
+      isSwinging: false,
+      swingProgress: 0,
+      targetBag: null,
+    },
   });
 
   const processedLiquidations = useRef(new Set<string>());
@@ -361,13 +369,26 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if hit fire zone (bottom 120px)
-    if (block.y + block.height >= canvas.height - 120) {
+    // Check if bag is close to bottom - activate robot
+    if (block.y + block.height >= canvas.height - 150 && !animationStateRef.current.robot.isActive) {
+      const robot = animationStateRef.current.robot;
+      if (!robot.isActive) {
+        robot.isActive = true;
+        robot.targetX = block.x + block.width / 2;
+        robot.targetBag = block.id;
+        robot.isSwinging = false;
+        robot.swingProgress = 0;
+      }
+    }
+
+    // Check if robot is swinging and hit the bag
+    const robot = animationStateRef.current.robot;
+    if (robot.isSwinging && robot.targetBag === block.id && robot.swingProgress > 0.5) {
       block.isExploding = true;
       block.explosionTime = 0;
 
-      // Create normal coin particles (fewer particles for missed bags)
-      const particleCount = Math.min(20, Math.floor(block.width / 4));
+      // Create mining particles
+      const particleCount = Math.min(30, Math.floor(block.width / 3));
       const state = animationStateRef.current;
       for (let i = 0; i < particleCount; i++) {
         state.particles.push(createParticle(
@@ -376,13 +397,23 @@ export function LiquidationCanvas({
           block.isLong
         ));
       }
+      
+      return true;
+    }
 
-      // Create intense fire burst when liquidation hits fire zone
-      const fireParticleCount = Math.min(25, Math.floor(block.width / 6));
-      for (let i = 0; i < fireParticleCount; i++) {
-        state.fireParticles.push(createFireParticle(
+    // Check if hit bottom without robot intervention
+    if (block.y + block.height >= canvas.height - 60) {
+      block.isExploding = true;
+      block.explosionTime = 0;
+
+      // Create normal particles for missed bags
+      const particleCount = Math.min(15, Math.floor(block.width / 5));
+      const state = animationStateRef.current;
+      for (let i = 0; i < particleCount; i++) {
+        state.particles.push(createParticle(
           block.x + block.width / 2,
-          canvas.height - 60
+          block.y + block.height / 2,
+          block.isLong
         ));
       }
       
@@ -404,52 +435,56 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Create fire particle
-  const createFireParticle = useCallback((x: number, y: number): FireParticle => {
-    return {
-      x: x + (Math.random() - 0.5) * 60, // Wider spread
-      y: y + Math.random() * 15,
-      vx: (Math.random() - 0.5) * 3,
-      vy: -Math.random() * 5 - 2, // Faster upward movement
-      life: 1,
-      maxLife: 1,
-      size: Math.random() * 12 + 4, // Larger flames
-      heat: 0.8 + Math.random() * 0.2, // Start hot
-    };
-  }, []);
-
-  // Update fire particle
-  const updateFireParticle = useCallback((particle: FireParticle, deltaTime: number): boolean => {
-    const frameMultiplier = deltaTime / 16.67;
-    particle.x += particle.vx * frameMultiplier;
-    particle.y += particle.vy * frameMultiplier;
-    particle.vy += 0.08 * frameMultiplier; // Light upward drift (wind effect)
-    particle.vx *= Math.pow(0.99, frameMultiplier); // Slow down horizontal movement
-    particle.life -= 0.015 * frameMultiplier; // Slower fade for longer flames
-    particle.size *= Math.pow(0.992, frameMultiplier); // Slower shrinking
-    particle.heat -= 0.008 * frameMultiplier; // Cool down gradually
+  // Update robot
+  const updateRobot = useCallback((robot: Robot, deltaTime: number, canvasHeight: number): void => {
+    robot.y = canvasHeight - 80; // Position robot near bottom
     
-    return particle.life > 0 && particle.size > 1;
-  }, []);
-
-  // Generate fire particles continuously
-  const generateFireParticles = useCallback((canvasWidth: number, canvasHeight: number) => {
-    const state = animationStateRef.current;
-    const fireZoneHeight = 120; // Taller fire zone
-    const fireZoneY = canvasHeight - fireZoneHeight;
-    
-    // Limit fire particles for performance (max 200 for denser fire)
-    if (state.fireParticles.length < 200) {
-      // Create 4-6 particles per frame for denser fire
-      for (let i = 0; i < 6; i++) {
-        if (Math.random() < 0.9) { // 90% chance to create particle
-          const x = Math.random() * canvasWidth;
-          const y = canvasHeight - Math.random() * 30; // Start from bottom
-          state.fireParticles.push(createFireParticle(x, y));
+    if (robot.isActive) {
+      // Move robot towards target
+      const dx = robot.targetX - robot.x;
+      const speed = 5;
+      
+      if (Math.abs(dx) > 5) {
+        robot.x += Math.sign(dx) * speed;
+      } else {
+        robot.x = robot.targetX;
+        
+        // Start swinging when reached target
+        if (!robot.isSwinging) {
+          robot.isSwinging = true;
+          robot.swingProgress = 0;
+        }
+      }
+      
+      // Handle swing animation
+      if (robot.isSwinging) {
+        robot.swingProgress += deltaTime * 0.01; // Swing speed
+        
+        if (robot.swingProgress >= 1) {
+          // Swing complete - reset robot
+          robot.isActive = false;
+          robot.isSwinging = false;
+          robot.swingProgress = 0;
+          robot.targetBag = null;
+          robot.x = -100; // Move off-screen
+          robot.targetX = -100;
         }
       }
     }
-  }, [createFireParticle]);
+  }, []);
+
+  // Activate robot for incoming bag
+  const activateRobotForBag = useCallback((bagX: number, bagId: string) => {
+    const robot = animationStateRef.current.robot;
+    
+    if (!robot.isActive) {
+      robot.isActive = true;
+      robot.targetX = bagX;
+      robot.targetBag = bagId;
+      robot.isSwinging = false;
+      robot.swingProgress = 0;
+    }
+  }, []);
 
   // Draw money bag without dollar sign for better readability
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
@@ -628,58 +663,77 @@ export function LiquidationCanvas({
     ctx.restore();
   }, []);
 
-  // Draw fire particle
-  const drawFireParticle = useCallback((ctx: CanvasRenderingContext2D, particle: FireParticle) => {
+  // Draw robot with pickaxe
+  const drawRobot = useCallback((ctx: CanvasRenderingContext2D, robot: Robot) => {
+    if (!robot.isActive) return;
+
     ctx.save();
-    ctx.globalAlpha = particle.life * 0.8;
+    ctx.translate(robot.x, robot.y);
     
-    // More realistic fire colors based on heat
-    let r, g, b;
-    if (particle.heat > 0.8) {
-      // Very hot - bright yellow/white core
-      r = 255;
-      g = 255;
-      b = Math.floor(200 + particle.heat * 55);
-    } else if (particle.heat > 0.6) {
-      // Hot - yellow/orange
-      r = 255;
-      g = Math.floor(150 + particle.heat * 105);
-      b = Math.floor(particle.heat * 50);
-    } else if (particle.heat > 0.3) {
-      // Medium - orange
-      r = 255;
-      g = Math.floor(50 + particle.heat * 150);
-      b = 0;
-    } else {
-      // Cool - red
-      r = Math.floor(200 + particle.heat * 55);
-      g = Math.floor(particle.heat * 80);
-      b = 0;
-    }
+    // Robot body (simple rectangular design)
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(-15, -40, 30, 35);
     
-    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-    ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = Math.floor(particle.size * 0.8);
+    // Robot head
+    ctx.fillStyle = '#888888';
+    ctx.fillRect(-12, -55, 24, 20);
     
-    // Draw flame-like teardrop shape instead of circle
-    const size = particle.size;
-    ctx.beginPath();
+    // Eyes (LED lights)
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(-8, -50, 4, 4);
+    ctx.fillRect(4, -50, 4, 4);
     
-    // Create flame shape (teardrop)
-    ctx.moveTo(particle.x, particle.y + size);
-    ctx.quadraticCurveTo(particle.x - size, particle.y, particle.x, particle.y - size * 1.5);
-    ctx.quadraticCurveTo(particle.x + size, particle.y, particle.x, particle.y + size);
-    ctx.fill();
+    // Arms
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(-25, -35, 10, 20); // Left arm
+    ctx.fillRect(15, -35, 10, 20);  // Right arm
     
-    // Add inner glow for hotter particles
-    if (particle.heat > 0.5) {
-      ctx.globalAlpha = particle.life * 0.3;
-      ctx.fillStyle = `rgb(255, 255, 180)`;
+    // Legs
+    ctx.fillRect(-18, -5, 12, 25);  // Left leg
+    ctx.fillRect(6, -5, 12, 25);    // Right leg
+    
+    // Pickaxe
+    ctx.strokeStyle = '#8B4513'; // Brown handle
+    ctx.lineWidth = 4;
+    
+    if (robot.isSwinging) {
+      // Animate pickaxe swing
+      const swingAngle = -Math.PI/3 + (robot.swingProgress * Math.PI/2);
+      const pickX = Math.cos(swingAngle) * 40;
+      const pickY = Math.sin(swingAngle) * 40;
+      
+      // Handle
       ctx.beginPath();
-      const innerSize = size * 0.6;
-      ctx.moveTo(particle.x, particle.y + innerSize);
-      ctx.quadraticCurveTo(particle.x - innerSize, particle.y, particle.x, particle.y - innerSize * 1.2);
-      ctx.quadraticCurveTo(particle.x + innerSize, particle.y, particle.x, particle.y + innerSize);
+      ctx.moveTo(20, -30);
+      ctx.lineTo(20 + pickX, -30 + pickY);
+      ctx.stroke();
+      
+      // Pickaxe head
+      ctx.fillStyle = '#C0C0C0'; // Silver
+      ctx.fillRect(18 + pickX, -35 + pickY, 8, 10);
+      
+      // Pick point
+      ctx.beginPath();
+      ctx.moveTo(22 + pickX, -25 + pickY);
+      ctx.lineTo(30 + pickX, -20 + pickY);
+      ctx.lineTo(22 + pickX, -15 + pickY);
+      ctx.fill();
+    } else {
+      // Static pickaxe position
+      ctx.beginPath();
+      ctx.moveTo(20, -30);
+      ctx.lineTo(20, -70);
+      ctx.stroke();
+      
+      // Pickaxe head
+      ctx.fillStyle = '#C0C0C0';
+      ctx.fillRect(18, -75, 8, 10);
+      
+      // Pick point
+      ctx.beginPath();
+      ctx.moveTo(22, -65);
+      ctx.lineTo(30, -60);
+      ctx.lineTo(22, -55);
       ctx.fill();
     }
     
@@ -911,15 +965,9 @@ export function LiquidationCanvas({
         return alive;
       });
 
-      // Generate and update fire particles (replacing impact zone)
-      generateFireParticles(canvas.width, canvas.height);
-      state.fireParticles = state.fireParticles.filter(particle => {
-        const alive = updateFireParticle(particle, deltaTime);
-        if (alive) {
-          drawFireParticle(ctx, particle);
-        }
-        return alive;
-      });
+      // Update and draw robot
+      updateRobot(state.robot, deltaTime, canvas.height);
+      drawRobot(ctx, state.robot);
 
       // Draw controls instructions
       ctx.save();
@@ -931,7 +979,7 @@ export function LiquidationCanvas({
     }
 
     requestAnimationFrame(animate);
-  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart, generateFireParticles, updateFireParticle, drawFireParticle]);
+  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart, updateRobot, drawRobot, activateRobotForBag]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

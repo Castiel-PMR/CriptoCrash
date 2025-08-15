@@ -70,9 +70,12 @@ export function LiquidationCanvas({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [showFlashText, setShowFlashText] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
 
   // Laser sound effect
   const playLaserSound = useCallback((isLeftCannon: boolean) => {
+    if (isSoundMuted) return; // Skip sound if muted
+    
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
@@ -95,7 +98,7 @@ export function LiquidationCanvas({
     } catch (error) {
       // Silent fail if audio context not supported
     }
-  }, []);
+  }, [isSoundMuted]);
 
   // Effect for text flashing animation
   useEffect(() => {
@@ -365,6 +368,17 @@ export function LiquidationCanvas({
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
     
+    // Check if click is on mute button (bottom right corner)
+    const buttonSize = 40;
+    const buttonX = canvasRef.current.width - buttonSize - 10;
+    const buttonY = canvasRef.current.height - buttonSize - 10;
+    
+    if (clickX >= buttonX && clickX <= buttonX + buttonSize && 
+        clickY >= buttonY && clickY <= buttonY + buttonSize) {
+      setIsSoundMuted(!isSoundMuted);
+      return;
+    }
+    
     const state = animationStateRef.current;
     
     // Check if click hit any money bag
@@ -398,7 +412,7 @@ export function LiquidationCanvas({
         break; // Only explode one bag per click
       }
     }
-  }, [createClickParticle]);
+  }, [createClickParticle, isSoundMuted]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -543,9 +557,9 @@ export function LiquidationCanvas({
   const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
     const state = animationStateRef.current;
     
-    // Position left cannon only (almost at bottom)
+    // Position left cannon only (slightly raised from bottom)
     state.leftCannon.x = 40;
-    state.leftCannon.y = canvasHeight - 20;
+    state.leftCannon.y = canvasHeight - 40;
     
     // Update firing animation for left cannon only
     if (state.leftCannon.isFiring) {
@@ -1256,6 +1270,28 @@ export function LiquidationCanvas({
         drawCannonball(ctx, ball);
       });
 
+      // Draw mute button in bottom right corner
+      const buttonSize = 40;
+      const buttonX = canvas.width - buttonSize - 10;
+      const buttonY = canvas.height - buttonSize - 10;
+      
+      // Button background
+      ctx.fillStyle = isSoundMuted ? '#ef4444' : '#22c55e';
+      ctx.globalAlpha = 0.8;
+      ctx.fillRect(buttonX, buttonY, buttonSize, buttonSize);
+      
+      // Button border
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 1;
+      ctx.strokeRect(buttonX, buttonY, buttonSize, buttonSize);
+      
+      // Speaker icon
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '20px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(isSoundMuted ? '🔇' : '🔊', buttonX + buttonSize/2, buttonY + buttonSize/2);
 
     }
 

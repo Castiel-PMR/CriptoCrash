@@ -11,7 +11,7 @@ export default function LiquidationDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
 
-  const [chartOpacity, setChartOpacity] = useState(12); // Opacity in percentage
+  const [chartOpacity, setChartOpacity] = useState(50); // Opacity in percentage
   
   const { 
     liquidations, 
@@ -223,8 +223,8 @@ export default function LiquidationDashboard() {
                 </label>
                 <input
                   type="range"
-                  min="5"
-                  max="50"
+                  min="0"
+                  max="100"
                   step="1"
                   value={chartOpacity}
                   onChange={(e) => setChartOpacity(parseInt(e.target.value))}

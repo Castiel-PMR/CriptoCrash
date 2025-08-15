@@ -15,7 +15,7 @@ interface ExtendedAnimationState extends AnimationState {
 export function LiquidationCanvas({ 
   liquidations, 
   isPaused, 
-  chartOpacity = 12 
+  chartOpacity = 50 
 }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStateRef = useRef<ExtendedAnimationState>({
@@ -683,9 +683,9 @@ export function LiquidationCanvas({
       const isGreen = candle.close >= candle.open;
       
       if (isGreen) {
-        // White/light gray for up candles - hollow (outline only)
+        // Light gray for up candles - filled with background color
         ctx.strokeStyle = '#888888';
-        ctx.fillStyle = 'transparent';
+        ctx.fillStyle = '#1a1a1a'; // Цвет фона графика
       } else {
         // Dark gray for down candles - filled
         ctx.fillStyle = '#333333';
@@ -706,7 +706,7 @@ export function LiquidationCanvas({
       // Reset stroke and fill colors for body
       if (isGreen) {
         ctx.strokeStyle = '#888888';
-        ctx.fillStyle = 'transparent';
+        ctx.fillStyle = '#1a1a1a'; // Цвет фона графика
       } else {
         ctx.fillStyle = '#333333';
         ctx.strokeStyle = '#333333';
@@ -721,7 +721,8 @@ export function LiquidationCanvas({
         ctx.stroke();
       } else {
         if (isGreen) {
-          // Up candles - hollow (outline only) 
+          // Up candles - filled with background color and stroked outline
+          ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
           ctx.lineWidth = 0.5;
           ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
         } else {

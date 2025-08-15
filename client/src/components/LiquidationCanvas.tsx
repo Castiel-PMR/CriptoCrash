@@ -375,7 +375,7 @@ export function LiquidationCanvas({
     
     if (clickX >= buttonX && clickX <= buttonX + buttonSize && 
         clickY >= buttonY && clickY <= buttonY + buttonSize) {
-      setIsSoundMuted(!isSoundMuted);
+      setIsSoundMuted(prev => !prev);
       return;
     }
     

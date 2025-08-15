@@ -595,14 +595,20 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
 
   // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
-    if (bitcoinCandles.length === 0) return;
+    console.log('drawBitcoinChart called, candles:', bitcoinCandles.length);
     
-    // Temporary test - draw a simple test rectangle to verify function is called
+    // Always draw test rectangle first to verify function is being called
     ctx.save();
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.8;
     ctx.fillStyle = '#ff0000';
     ctx.fillRect(10, 10, 100, 50);
+    ctx.fillText('TEST', 20, 35);
     ctx.restore();
+    
+    if (bitcoinCandles.length === 0) {
+      console.log('No bitcoin candles data, exiting');
+      return;
+    }
     
     // Find min/max prices from all candles
     const allPrices = bitcoinCandles.flatMap(candle => [candle.high, candle.low]);
@@ -720,6 +726,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Draw Bitcoin chart background (dimmed)
+      console.log('About to call drawBitcoinChart, canvas size:', canvas.width, canvas.height);
       drawBitcoinChart(ctx, canvas.width, canvas.height);
 
 

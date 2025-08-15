@@ -1289,33 +1289,7 @@ export function LiquidationCanvas({
       }
     }
     
-    // Draw minimal price labels with live indicator (top header)
-    ctx.globalAlpha = 0.4;
-    ctx.fillStyle = '#666666';
-    ctx.font = '9px JetBrains Mono, monospace';
-    ctx.textAlign = 'left';
-    
-    if (lastCandle) {
-      // Show current Bitcoin price in header (left side)
-      ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, 10, 20);
-      
-      // Add live indicator (pulsing dot) in header
-      const timeSinceUpdate = Date.now() - lastUpdateTime;
-      const isRecent = timeSinceUpdate < 20000; // 20 seconds
-      if (isRecent) {
-        const alpha = 0.3 + 0.4 * Math.sin(Date.now() * 0.005); // Pulsing effect
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = '#00ff88';
-        ctx.beginPath();
-        ctx.arc(150, 15, 3, 0, Math.PI * 2);
-        ctx.fill();
-        
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = '#666666';
-        ctx.textAlign = 'left';
-        ctx.fillText('LIVE', 160, 20);
-      }
-    }
+    // No header text - clean chart appearance
     
     ctx.restore();
   }, [bitcoinCandles]);
@@ -1481,7 +1455,7 @@ export function LiquidationCanvas({
       />
       
       {/* Timeframe Selector */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-16 right-4 z-10">
         <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-2">
           <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
           {timeframeOptions.map((tf) => (

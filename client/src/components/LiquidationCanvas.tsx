@@ -155,15 +155,23 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     const clickX = e.clientX - rect.left;
     const clickY = e.clientY - rect.top;
     
+    console.log(`Canvas rect: left=${rect.left}, top=${rect.top}, width=${rect.width}, height=${rect.height}`);
+    console.log(`Click: clientX=${e.clientX}, clientY=${e.clientY}, canvasX=${clickX}, canvasY=${clickY}`);
+    
     const state = animationStateRef.current;
     
     // Check if click hit any money bag
+    console.log(`Checking ${state.liquidations.length} bags for hit`);
     for (let i = 0; i < state.liquidations.length; i++) {
       const bag = state.liquidations[i];
+      
+      console.log(`Bag ${i}: x=${bag.x.toFixed(1)}, y=${bag.y.toFixed(1)}, w=${bag.width}, h=${bag.height}`);
       
       if (!bag.isExploding && 
           clickX >= bag.x && clickX <= bag.x + bag.width &&
           clickY >= bag.y && clickY <= bag.y + bag.height) {
+        
+        console.log(`HIT! Bag ${i} at (${bag.x.toFixed(1)}, ${bag.y.toFixed(1)}) clicked at (${clickX}, ${clickY})`);
         
         // Create click explosion immediately
         bag.isExploding = true;

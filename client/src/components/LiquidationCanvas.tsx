@@ -624,9 +624,9 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.save();
     
     // Draw very subtle grid lines like TradingView
-    ctx.globalAlpha = 0.08;
-    ctx.strokeStyle = '#666666';
-    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.05;
+    ctx.strokeStyle = '#444444';
+    ctx.lineWidth = 0.5;
     
     // Horizontal grid lines (price levels)
     for (let i = 1; i < 8; i++) {
@@ -646,8 +646,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       ctx.stroke();
     }
     
-    // Draw candlesticks with TradingView-like appearance - very subtle background
-    ctx.globalAlpha = 0.15;
+    // Draw candlesticks in monochrome style - very subtle background
+    ctx.globalAlpha = 0.12;
     
     const candleWidth = Math.max(6, width / bitcoinCandles.length * 0.7);
     const candleSpacing = width / bitcoinCandles.length;
@@ -664,21 +664,22 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       const highY = margin + ((maxPrice - candle.high) / priceRange) * chartHeight;
       const lowY = margin + ((maxPrice - candle.low) / priceRange) * chartHeight;
       
-      // TradingView-like colors - very subtle for background
+      // Monochrome style - subtle black and white background
       const isGreen = candle.close >= candle.open;
       
       if (isGreen) {
-        // Green candles - outline only for hollow candles when close > open
-        ctx.strokeStyle = '#26a69a';
+        // White/light gray for up candles - hollow (outline only)
+        ctx.strokeStyle = '#888888';
         ctx.fillStyle = 'transparent';
       } else {
-        // Red candles - filled when close < open
-        ctx.fillStyle = '#ef5350';
-        ctx.strokeStyle = '#ef5350';
+        // Dark gray for down candles - filled
+        ctx.fillStyle = '#333333';
+        ctx.strokeStyle = '#333333';
       }
       
-      // Draw thin wick (high-low line)
-      ctx.lineWidth = 1;
+      // Draw very thin wick (high-low line) - subtle gray
+      ctx.strokeStyle = '#555555';
+      ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.moveTo(x, highY);
       ctx.lineTo(x, lowY);
@@ -688,20 +689,29 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       const bodyTop = Math.min(openY, closeY);
       const bodyHeight = Math.max(2, Math.abs(closeY - openY));
       
+      // Reset stroke and fill colors for body
+      if (isGreen) {
+        ctx.strokeStyle = '#888888';
+        ctx.fillStyle = 'transparent';
+      } else {
+        ctx.fillStyle = '#333333';
+        ctx.strokeStyle = '#333333';
+      }
+      
       if (bodyHeight < 3) {
         // Doji - thin horizontal line
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(x - candleWidth/2, openY);
         ctx.lineTo(x + candleWidth/2, openY);
         ctx.stroke();
       } else {
         if (isGreen) {
-          // Green candles - hollow (outline only)
-          ctx.lineWidth = 1;
+          // Up candles - hollow (outline only) 
+          ctx.lineWidth = 0.5;
           ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
         } else {
-          // Red candles - filled
+          // Down candles - filled dark
           ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
         }
       }

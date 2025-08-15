@@ -37,6 +37,7 @@ export function LiquidationCanvas({
   const processedLiquidations = useRef(new Set<string>());
   const lastVisibleTime = useRef<number>(Date.now());
   const chartOpacityRef = useRef<number>(chartOpacity);
+  const componentStartTime = useRef<number>(Date.now()); // Track when component started
 
 
   // Update refs when props change
@@ -820,9 +821,14 @@ export function LiquidationCanvas({
     const currentTime = Date.now();
     
     liquidations.forEach(liquidation => {
-      // Skip old liquidations if page was hidden (no accumulated animations)
+      // Skip liquidations that happened before component loaded (prevents duplicates on reload)
+      if (liquidation.timestamp < componentStartTime.current) {
+        return;
+      }
+      
+      // Skip old liquidations - only show very fresh ones to prevent duplicates on reload
       const liquidationAge = currentTime - liquidation.timestamp;
-      const maxAge = 10000; // 10 seconds max age for liquidations
+      const maxAge = 3000; // 3 seconds max age for liquidations
       
       if (liquidationAge > maxAge) {
         // Skip old liquidations

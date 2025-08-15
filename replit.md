@@ -4,6 +4,20 @@
 
 CryptoLiquidations is a real-time cryptocurrency liquidation monitoring application that visualizes liquidation events from cryptocurrency exchanges through an interactive canvas-based interface. The application provides live streaming of liquidation data via WebSocket connections and displays market statistics with animated visual effects. Users can monitor long and short liquidation positions across various cryptocurrencies with real-time updates and market sentiment analysis.
 
+## Recent Changes (August 2025)
+
+### Performance and Animation Optimizations
+- **Reduced animation speeds by 2-2.5x** for comfortable viewing experience (small liquidations: 2.0px/s, large: 0.6px/s)
+- **Fixed chart opacity affecting animation speed bug** by implementing ref-based state management for chartOpacity and showGrid
+- **Added page visibility API integration** to prevent animation buildup when tab is hidden - only real-time liquidations (max 10 seconds old) are displayed
+- **Optimized chart rendering** with independent opacity controls that don't trigger animation function recreation
+
+### User Interface Improvements  
+- **Settings moved to modal window** instead of canvas overlay for cleaner interface
+- **Chart transparency controls** working independently from animation system
+- **Grid toggle functionality** accessible through Settings modal
+- **Professional monochrome chart styling** with hollow/filled candlesticks for clear background appearance
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

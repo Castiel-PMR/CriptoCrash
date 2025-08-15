@@ -30,14 +30,16 @@ CryptoLiquidations is a real-time cryptocurrency liquidation monitoring applicat
 - **Proper text positioning** - all text stays within bag boundaries, no overflow
 - **Simple rope tie detail** with brown color and elliptical neck design
 
-### Historical Cannon System (August 15, 2025)
+### Historical Cannon System - STABLE VERSION (August 15, 2025)
 - **Completely redesigned cannon in 17-18th century style** - replaced futuristic turret with historical design
 - **Wooden carriage with bronze barrel** - authentic period appearance with wood grain texture and bronze/brass coloring
-- **Large spoked wheels** - 8-spoke wooden wheels with proper hub design typical of period artillery
-- **Moving cannon system** - cannon travels horizontally along bottom boundary while shooting on the move
+- **Large spoked wheels with realistic rotation** - 8-spoke wooden wheels that rotate correctly based on movement direction
+- **Full-width movement system** - cannon travels from edge to near mute button with increased speed (1.0 units/frame)
+- **Directional wheel physics** - wheels rotate forward when moving right, backward when moving left
 - **Historical cannonballs** - replaced laser beams with iron cannonballs featuring metallic gradient and highlight
 - **Period-appropriate muzzle flash** - orange/yellow gunpowder flash instead of sci-fi effects
 - **Realistic cannon sound** - deep boom with dual oscillators (60Hz base + 400Hz crack) for authentic artillery sound
+- **Dynamic positioning** - automatically adjusts movement range based on canvas width
 
 ## User Preferences
 

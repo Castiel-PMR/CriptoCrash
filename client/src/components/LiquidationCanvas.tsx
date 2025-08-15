@@ -607,40 +607,40 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     
     ctx.save();
     
-    // Draw subtle grid lines first
-    ctx.globalAlpha = 0.2;
-    ctx.strokeStyle = '#444444';
+    // Draw very subtle grid lines like TradingView
+    ctx.globalAlpha = 0.08;
+    ctx.strokeStyle = '#666666';
     ctx.lineWidth = 1;
     
     // Horizontal grid lines (price levels)
-    for (let i = 1; i < 6; i++) {
-      const y = (height * i) / 6;
+    for (let i = 1; i < 8; i++) {
+      const y = (height * i) / 8;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
       ctx.stroke();
     }
     
-    // Vertical grid lines (time)
-    for (let i = 1; i < 8; i++) {
-      const x = (width * i) / 8;
+    // Vertical grid lines (time) - fewer lines
+    for (let i = 1; i < 6; i++) {
+      const x = (width * i) / 6;
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
       ctx.stroke();
     }
     
-    // Draw bright candlesticks for visibility
-    ctx.globalAlpha = 0.7;
+    // Draw candlesticks with TradingView-like appearance - very subtle background
+    ctx.globalAlpha = 0.15;
     
-    const candleWidth = Math.max(8, width / bitcoinCandles.length * 0.8);
+    const candleWidth = Math.max(6, width / bitcoinCandles.length * 0.7);
     const candleSpacing = width / bitcoinCandles.length;
     
     bitcoinCandles.forEach((candle, index) => {
       const x = (index + 0.5) * candleSpacing;
       
-      // Scale prices to canvas
-      const margin = height * 0.05;
+      // Scale prices to canvas with proper margins
+      const margin = height * 0.1;
       const chartHeight = height - 2 * margin;
       
       const openY = margin + ((maxPrice - candle.open) / priceRange) * chartHeight;
@@ -648,13 +648,21 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       const highY = margin + ((maxPrice - candle.high) / priceRange) * chartHeight;
       const lowY = margin + ((maxPrice - candle.low) / priceRange) * chartHeight;
       
-      // Visible but subtle colors for background chart
+      // TradingView-like colors - very subtle for background
       const isGreen = candle.close >= candle.open;
-      ctx.fillStyle = isGreen ? '#26a69a' : '#ef5350';
-      ctx.strokeStyle = isGreen ? '#26a69a' : '#ef5350';
       
-      // Draw wick (high-low line)
-      ctx.lineWidth = 2;
+      if (isGreen) {
+        // Green candles - outline only for hollow candles when close > open
+        ctx.strokeStyle = '#26a69a';
+        ctx.fillStyle = 'transparent';
+      } else {
+        // Red candles - filled when close < open
+        ctx.fillStyle = '#ef5350';
+        ctx.strokeStyle = '#ef5350';
+      }
+      
+      // Draw thin wick (high-low line)
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x, highY);
       ctx.lineTo(x, lowY);
@@ -662,39 +670,41 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       
       // Draw candle body
       const bodyTop = Math.min(openY, closeY);
-      const bodyHeight = Math.max(3, Math.abs(closeY - openY));
+      const bodyHeight = Math.max(2, Math.abs(closeY - openY));
       
-      if (bodyHeight < 5) {
-        // Doji - thick horizontal line
-        ctx.lineWidth = 3;
+      if (bodyHeight < 3) {
+        // Doji - thin horizontal line
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(x - candleWidth/2, openY);
         ctx.lineTo(x + candleWidth/2, openY);
         ctx.stroke();
       } else {
-        // Normal candle body
-        ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
-        // Add outline for better definition
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
+        if (isGreen) {
+          // Green candles - hollow (outline only)
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
+        } else {
+          // Red candles - filled
+          ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
+        }
       }
     });
     
-    // Draw price labels
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#999999';
-    ctx.font = '10px JetBrains Mono, monospace';
+    // Draw minimal price labels - only current price
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = '#666666';
+    ctx.font = '9px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
     
     const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
     if (lastCandle) {
       const margin = height * 0.1;
       const chartHeight = height - 2 * margin;
-      const currentY = margin + (1 - (lastCandle.close - minPrice) / priceRange) * chartHeight;
+      const currentY = margin + ((maxPrice - lastCandle.close) / priceRange) * chartHeight;
       
-      ctx.fillText(`$${Math.round(lastCandle.close).toLocaleString()}`, width - 5, currentY);
-      ctx.fillText(`$${Math.round(maxPrice).toLocaleString()}`, width - 5, margin + 12);
-      ctx.fillText(`$${Math.round(minPrice).toLocaleString()}`, width - 5, height - margin);
+      // Only show current Bitcoin price in corner
+      ctx.fillText(`BTC $${Math.round(lastCandle.close).toLocaleString()}`, width - 10, 20);
     }
     
     ctx.restore();

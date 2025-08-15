@@ -775,78 +775,138 @@ export function LiquidationCanvas({
       ctx.scale(-1, 1);
     }
     
-    // Compact Star Wars style base - smaller size
-    const baseGradient = ctx.createLinearGradient(-20, -6, 20, 6);
-    baseGradient.addColorStop(0, '#2d3748'); // Dark gray
-    baseGradient.addColorStop(0.5, '#4a5568'); // Medium gray
-    baseGradient.addColorStop(1, '#1a202c'); // Very dark gray
+    // Tripod legs (three legs extending outward)
+    const legGradient = ctx.createLinearGradient(0, 0, 0, 25);
+    legGradient.addColorStop(0, '#4a5568');
+    legGradient.addColorStop(1, '#2d3748');
     
-    ctx.fillStyle = baseGradient;
-    ctx.shadowColor = '#4299e1';
-    ctx.shadowBlur = 4;
-    ctx.fillRect(-20, -6, 40, 12);
-    
-    // Glowing border - smaller
-    ctx.strokeStyle = '#63b3ed';
+    ctx.fillStyle = legGradient;
+    ctx.strokeStyle = '#6b7280';
     ctx.lineWidth = 1;
-    ctx.strokeRect(-20, -6, 40, 12);
-    ctx.shadowBlur = 0;
     
-    // Single central hover disc - smaller
-    const discGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
-    discGradient.addColorStop(0, '#4299e1'); // Blue center
-    discGradient.addColorStop(0.7, '#2b6cb0'); // Darker blue
-    discGradient.addColorStop(1, '#2c5282'); // Dark edge
-    
+    // Left leg
     ctx.save();
-    ctx.translate(0, 6);
-    ctx.fillStyle = discGradient;
-    ctx.beginPath();
-    ctx.arc(0, 0, 8, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Inner ring effect - smaller
-    ctx.strokeStyle = '#90cdf4';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.rotate(-Math.PI / 6);
+    ctx.fillRect(-2, 0, 4, 25);
+    ctx.strokeRect(-2, 0, 4, 25);
     ctx.restore();
     
-    // Compact Star Wars blaster barrel
-    const barrelLength = 35; // Shorter barrel
-    let barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 6; // Default elevation
+    // Right leg  
+    ctx.save();
+    ctx.rotate(Math.PI / 6);
+    ctx.fillRect(-2, 0, 4, 25);
+    ctx.strokeRect(-2, 0, 4, 25);
+    ctx.restore();
+    
+    // Back leg
+    ctx.save();
+    ctx.rotate(Math.PI);
+    ctx.fillRect(-2, 0, 4, 25);
+    ctx.strokeRect(-2, 0, 4, 25);
+    ctx.restore();
+    
+    // Base platform (wider cylinder)
+    const baseGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
+    baseGradient.addColorStop(0, '#4a5568');
+    baseGradient.addColorStop(0.8, '#374151');
+    baseGradient.addColorStop(1, '#1f2937');
+    
+    ctx.fillStyle = baseGradient;
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.stroke();
+    
+    // Turret head (upper rotating part)
+    const turretGradient = ctx.createLinearGradient(-8, -8, 8, 8);
+    turretGradient.addColorStop(0, '#6b7280');
+    turretGradient.addColorStop(0.5, '#4a5568');
+    turretGradient.addColorStop(1, '#374151');
+    
+    ctx.fillStyle = turretGradient;
+    ctx.fillRect(-8, -8, 16, 10);
+    
+    // Turret outline
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-8, -8, 16, 10);
+    
+    // Detail lines and panels
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(-6, -6);
+    ctx.lineTo(6, -6);
+    ctx.moveTo(-6, -4);
+    ctx.lineTo(6, -4);
+    ctx.stroke();
+    
+    // Sight/sensor on top
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(-1, -10, 2, 2);
+    ctx.strokeStyle = '#dc2626';
+    ctx.strokeRect(-1, -10, 2, 2);
+    
+    // Long turret cannon barrel like in the image
+    const barrelLength = 55; // Longer barrel like in image
+    let barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 8; // Slight upward angle
     
     // Adjust angle for mirrored right cannon
     if (cannon.side === 'right') {
-      barrelAngle = cannon.isFiring ? -cannon.angle : -Math.PI / 6;
+      barrelAngle = cannon.isFiring ? -cannon.angle : -Math.PI / 8;
     }
     
     ctx.save();
     ctx.rotate(barrelAngle);
     
-    const barrelGradient = ctx.createLinearGradient(0, -5, 0, 5);
-    barrelGradient.addColorStop(0, '#4a5568'); // Gray
-    barrelGradient.addColorStop(0.5, '#2d3748'); // Dark gray
-    barrelGradient.addColorStop(1, '#1a202c'); // Very dark gray
+    // Main barrel body
+    const barrelGradient = ctx.createLinearGradient(0, -4, 0, 4);
+    barrelGradient.addColorStop(0, '#6b7280');
+    barrelGradient.addColorStop(0.5, '#4a5568');
+    barrelGradient.addColorStop(1, '#374151');
     
     ctx.fillStyle = barrelGradient;
-    ctx.fillRect(0, -5, barrelLength, 10); // Thinner barrel
+    ctx.fillRect(0, -4, barrelLength, 8);
     
-    // Glowing barrel outline - Star Wars style
-    ctx.strokeStyle = '#63b3ed';
+    // Barrel outline
+    ctx.strokeStyle = '#9ca3af';
     ctx.lineWidth = 1;
-    ctx.strokeRect(0, -5, barrelLength, 10);
+    ctx.strokeRect(0, -4, barrelLength, 8);
     
-    // Barrel segments for Star Wars detail
-    ctx.strokeStyle = '#90cdf4';
-    ctx.lineWidth = 0.5;
-    for (let i = 8; i < barrelLength; i += 8) {
-      ctx.beginPath();
-      ctx.moveTo(i, -5);
-      ctx.lineTo(i, 5);
-      ctx.stroke();
-    }
+    // Cylindrical segments like in the image
+    const segmentGradient = ctx.createLinearGradient(0, -5, 0, 5);
+    segmentGradient.addColorStop(0, '#8b5cf6');
+    segmentGradient.addColorStop(0.5, '#7c3aed');
+    segmentGradient.addColorStop(1, '#6d28d9');
+    
+    // Draw colored segments (red, gold, purple bands)
+    const segments = [
+      { pos: 8, width: 3, color: '#ef4444' },  // Red band
+      { pos: 15, width: 2, color: '#f59e0b' }, // Gold band  
+      { pos: 25, width: 4, color: '#8b5cf6' }, // Purple band
+      { pos: 35, width: 2, color: '#ef4444' }, // Red band
+      { pos: 42, width: 3, color: '#6b7280' }  // Gray band
+    ];
+    
+    segments.forEach(segment => {
+      const segGrad = ctx.createLinearGradient(0, -5, 0, 5);
+      segGrad.addColorStop(0, segment.color);
+      segGrad.addColorStop(0.5, segment.color + '88'); // Semi-transparent
+      segGrad.addColorStop(1, segment.color);
+      
+      ctx.fillStyle = segGrad;
+      ctx.fillRect(segment.pos, -5, segment.width, 10);
+      
+      // Segment outline
+      ctx.strokeStyle = segment.color;
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(segment.pos, -5, segment.width, 10);
+    });
     
     // Laser muzzle flash when firing (Star Wars style)
     if (cannon.isFiring && cannon.fireProgress < 0.4) {

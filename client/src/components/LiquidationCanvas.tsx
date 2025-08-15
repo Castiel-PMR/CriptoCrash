@@ -715,7 +715,12 @@ export function LiquidationCanvas({
         ctx.strokeStyle = '#333333';
       }
       
-      // No wicks - just candle body without high-low lines
+      // Draw high-low shadow lines (wicks) first
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(x, highY);
+      ctx.lineTo(x, lowY);
+      ctx.stroke();
       
       // Draw candle body
       const bodyTop = Math.min(openY, closeY);

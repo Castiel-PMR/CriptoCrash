@@ -68,6 +68,22 @@ export function LiquidationCanvas({
   }, [chartOpacity]);
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [showFlashText, setShowFlashText] = useState(false);
+  const [isFlashing, setIsFlashing] = useState(false);
+
+  // Effect for text flashing animation
+  useEffect(() => {
+    if (showFlashText) {
+      setIsFlashing(true);
+      const flashInterval = setInterval(() => {
+        setIsFlashing(prev => !prev);
+      }, 300); // Flashing every 300ms
+
+      return () => clearInterval(flashInterval);
+    } else {
+      setIsFlashing(false);
+    }
+  }, [showFlashText]);
 
   // Update canvas size
   const updateCanvasSize = useCallback(() => {
@@ -1090,6 +1106,10 @@ export function LiquidationCanvas({
             state.liquidations.push(block);
             processedLiquidations.current.add(uniqueKey);
             
+            // Trigger flash text when liquidation appears
+            setShowFlashText(true);
+            setTimeout(() => setShowFlashText(false), 2000); // Show for 2 seconds
+            
             // Keep processed set manageable (remove old entries)
             if (processedLiquidations.current.size > 1000) {
               const entries = Array.from(processedLiquidations.current);
@@ -1140,6 +1160,21 @@ export function LiquidationCanvas({
             </button>
           ))}
         </div>
+        
+        {/* Flashing text "Click to explode bags" */}
+        {showFlashText && (
+          <div 
+            className={`
+              absolute top-0 left-full ml-4 flex items-center h-full
+              transition-opacity duration-150
+              ${isFlashing ? 'opacity-100' : 'opacity-30'}
+            `}
+          >
+            <span className="text-sm font-mono text-yellow-400 whitespace-nowrap">
+              Click to explode bags
+            </span>
+          </div>
+        )}
       </div>
       
 

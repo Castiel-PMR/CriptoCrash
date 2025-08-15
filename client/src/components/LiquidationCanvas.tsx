@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Liquidation } from '@shared/schema';
-import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation';
+import { Liquidation, LiquidationBlock, Platform } from '@shared/schema';
+import { Particle, AnimationState } from '../types/liquidation';
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
@@ -8,15 +8,29 @@ interface LiquidationCanvasProps {
   isPaused: boolean;
 }
 
+interface ExtendedAnimationState extends AnimationState {
+  platform: Platform;
+}
+
 export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationStateRef = useRef<AnimationState>({
+  const animationStateRef = useRef<ExtendedAnimationState>({
     liquidations: [],
     particles: [],
     animationSpeed: 1,
     isPaused: false,
     lastTime: 0,
+    platform: {
+      x: 0,
+      y: 0,
+      width: 150,
+      height: 20,
+      score: 0,
+      totalCaught: 0,
+    },
   });
+
+  const [keys, setKeys] = useState({ left: false, right: false });
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -29,7 +43,41 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     if (canvasRef.current) {
       canvasRef.current.width = width;
       canvasRef.current.height = height;
+      
+      // Initialize platform position
+      const state = animationStateRef.current;
+      state.platform.x = width / 2 - state.platform.width / 2;
+      state.platform.y = height - 40;
     }
+  }, []);
+
+  // Keyboard controls
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        setKeys(prev => ({ ...prev, left: true }));
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        setKeys(prev => ({ ...prev, right: true }));
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        setKeys(prev => ({ ...prev, left: false }));
+      }
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        setKeys(prev => ({ ...prev, right: false }));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, []);
 
   useEffect(() => {
@@ -83,6 +131,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       opacity: 1,
       isExploding: false,
       explosionTime: 0,
+      isCaught: false,
     };
   }, []);
 
@@ -98,6 +147,22 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       decay: Math.random() * 0.015 + 0.008, // Longer lasting coins
       color: '#ffd700', // Gold color for coins
       size: Math.random() * 6 + 4, // Slightly bigger coins
+    };
+  }, []);
+
+  // Create special particle for caught bags (more spectacular)
+  const createCaughtParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
+    const colors = ['#FFD700', '#FFA500', '#FFFF00', '#FF6347', '#00FF00']; // Multiple colors for celebration
+    return {
+      id: Math.random().toString(),
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 16, // Even faster spread
+      vy: (Math.random() - 0.5) * 14 - 6, // Much more upward velocity
+      life: 1,
+      decay: Math.random() * 0.01 + 0.005, // Longer lasting celebration
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 8 + 6, // Bigger celebration particles
     };
   }, []);
 
@@ -117,14 +182,43 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     block.y += block.velocity * animationSpeed;
     block.rotation += block.rotationSpeed * animationSpeed;
 
-    // Check if hit bottom
+    // Check collision with platform
+    const state = animationStateRef.current;
+    const platform = state.platform;
+    
+    if (!block.isCaught && 
+        block.x + block.width > platform.x && 
+        block.x < platform.x + platform.width &&
+        block.y + block.height > platform.y && 
+        block.y < platform.y + platform.height) {
+      // Caught by platform!
+      block.isCaught = true;
+      block.isExploding = true;
+      block.explosionTime = 0;
+      
+      // Update platform score
+      platform.score += block.amount;
+      platform.totalCaught++;
+
+      // Create special caught explosion (more particles, different colors)
+      const particleCount = Math.min(50, Math.floor(block.width / 2)); // Even more particles for caught bags
+      for (let i = 0; i < particleCount; i++) {
+        state.particles.push(createCaughtParticle(
+          block.x + block.width / 2,
+          block.y + block.height / 2,
+          block.isLong
+        ));
+      }
+      return true;
+    }
+
+    // Check if hit bottom (missed by platform)
     if (block.y + block.height >= canvas.height - 60) {
       block.isExploding = true;
       block.explosionTime = 0;
 
-      // Create coin particles (more particles for bigger bags)
-      const state = animationStateRef.current;
-      const particleCount = Math.min(30, Math.floor(block.width / 3)); // More coins for bigger bags
+      // Create normal coin particles (fewer particles for missed bags)
+      const particleCount = Math.min(20, Math.floor(block.width / 4));
       for (let i = 0; i < particleCount; i++) {
         state.particles.push(createParticle(
           block.x + block.width / 2,
@@ -268,6 +362,38 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     ctx.restore();
   }, []);
 
+  // Draw platform
+  const drawPlatform = useCallback((ctx: CanvasRenderingContext2D, platform: Platform) => {
+    ctx.save();
+    
+    // Platform body with gradient
+    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height);
+    gradient.addColorStop(0, '#4A90E2');
+    gradient.addColorStop(0.5, '#357ABD');
+    gradient.addColorStop(1, '#1E4A78');
+    
+    ctx.fillStyle = gradient;
+    ctx.shadowColor = '#4A90E2';
+    ctx.shadowBlur = 10;
+    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+    
+    // Platform border
+    ctx.strokeStyle = '#87CEEB';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+    
+    // Platform decorative elements
+    ctx.fillStyle = '#87CEEB';
+    for (let i = 0; i < 3; i++) {
+      const dotX = platform.x + (platform.width / 4) * (i + 1);
+      ctx.beginPath();
+      ctx.arc(dotX, platform.y + platform.height / 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  }, []);
+
   // Animation loop
   const animate = useCallback((currentTime: number) => {
     const canvas = canvasRef.current;
@@ -284,6 +410,15 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       // Clear canvas with fade effect
       ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Update platform position based on keys
+      const platformSpeed = 8 * animationSpeed;
+      if (keys.left && state.platform.x > 0) {
+        state.platform.x -= platformSpeed;
+      }
+      if (keys.right && state.platform.x < canvas.width - state.platform.width) {
+        state.platform.x += platformSpeed;
+      }
 
       // Update and draw liquidations
       state.liquidations = state.liquidations.filter(block => {
@@ -302,6 +437,24 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
         }
         return alive;
       });
+
+      // Draw platform
+      drawPlatform(ctx, state.platform);
+      
+      // Draw score and controls
+      ctx.save();
+      ctx.fillStyle = '#FFD700';
+      ctx.font = 'bold 16px JetBrains Mono, monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`Score: $${(state.platform.score / 1000000).toFixed(1)}M`, 20, canvas.height - 80);
+      ctx.fillText(`Caught: ${state.platform.totalCaught}`, 20, canvas.height - 60);
+      
+      // Draw controls instructions
+      ctx.fillStyle = '#87CEEB';
+      ctx.font = '14px JetBrains Mono, monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText('Use ← → or A D keys to move platform', canvas.width - 20, canvas.height - 40);
+      ctx.restore();
     }
 
     requestAnimationFrame(animate);
@@ -339,6 +492,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
         className="absolute inset-0 w-full h-full"
         width={canvasSize.width}
         height={canvasSize.height}
+        tabIndex={0}
+        style={{ outline: 'none' }}
       />
       
       {/* Impact Zone Indicator */}

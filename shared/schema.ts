@@ -45,6 +45,16 @@ export interface LiquidationBlock {
   opacity: number;
   isExploding: boolean;
   explosionTime: number;
+  isCaught: boolean;
+}
+
+export interface Platform {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  score: number;
+  totalCaught: number;
 }
 
 export interface Particle {

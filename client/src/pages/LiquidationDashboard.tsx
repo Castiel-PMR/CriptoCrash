@@ -88,7 +88,7 @@ export default function LiquidationDashboard() {
                 Showing: {filteredLiquidations.length} of {liquidations.length} liquidations
               </div>
               
-              <div className="grid grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 <button 
                   onClick={() => setMinLiquidationAmount(10000)}
                   className={`px-2 py-1 rounded text-center transition-colors ${
@@ -98,6 +98,16 @@ export default function LiquidationDashboard() {
                   }`}
                 >
                   $10K
+                </button>
+                <button 
+                  onClick={() => setMinLiquidationAmount(50000)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 50000 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $50K
                 </button>
                 <button 
                   onClick={() => setMinLiquidationAmount(100000)}

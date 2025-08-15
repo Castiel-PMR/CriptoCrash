@@ -110,29 +110,29 @@ export function LiquidationCanvas({
     const value = liquidation.value;
     let size;
     
-    // Более медленная система скоростей для комфортного просмотра
+    // Ещё более медленная система скоростей для спокойного просмотра
     let baseVelocity;
     if (value < 5000) {
       size = 60; // Очень маленькие
-      baseVelocity = 2.0; // Замедлил с 5.0 до 2.0
+      baseVelocity = 1.2; // Замедлил ещё больше до 1.2
     } else if (value < 15000) {
       size = 80; // Маленькие  
-      baseVelocity = 1.8; // Замедлил с 4.0 до 1.8
+      baseVelocity = 1.0; // Замедлил ещё больше до 1.0
     } else if (value < 50000) {
       size = 100; // Средние
-      baseVelocity = 1.5; // Замедлил с 3.2 до 1.5
+      baseVelocity = 0.9; // Замедлил ещё больше до 0.9
     } else if (value < 100000) {
       size = 130; // Средне-большие
-      baseVelocity = 1.3; // Замедлил с 2.5 до 1.3
+      baseVelocity = 0.8; // Замедлил ещё больше до 0.8
     } else if (value < 500000) {
       size = 160; // Большие
-      baseVelocity = 1.0; // Замедлил с 2.0 до 1.0
+      baseVelocity = 0.6; // Замедлил ещё больше до 0.6
     } else if (value < 1000000) {
       size = 200; // Очень большие
-      baseVelocity = 0.8; // Замедлил с 1.5 до 0.8
+      baseVelocity = 0.5; // Замедлил ещё больше до 0.5
     } else {
       size = 250; // Огромные
-      baseVelocity = 0.6; // Замедлил с 1.2 до 0.6
+      baseVelocity = 0.4; // Замедлил ещё больше до 0.4
     }
 
     console.log(`Liquidation: $${value.toFixed(0)} -> Size: ${size}px, Speed: ${baseVelocity.toFixed(2)}`);;

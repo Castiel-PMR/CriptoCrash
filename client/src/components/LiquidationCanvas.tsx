@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Liquidation, LiquidationBlock, Platform } from '@shared/schema';
-import { Particle, AnimationState } from '../types/liquidation';
+import { Liquidation, Platform } from '@shared/schema';
+import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation';
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
@@ -54,30 +54,79 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') {
         setKeys(prev => ({ ...prev, left: true }));
       }
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+      if (e.key === 'ArrowRight') {
         setKeys(prev => ({ ...prev, right: true }));
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+      e.preventDefault();
+      if (e.key === 'ArrowLeft') {
         setKeys(prev => ({ ...prev, left: false }));
       }
-      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+      if (e.key === 'ArrowRight') {
         setKeys(prev => ({ ...prev, right: false }));
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
     
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
     };
+  }, []);
+
+  // Mouse click handling
+  useEffect(() => {
+    const handleCanvasClick = (e: MouseEvent) => {
+      if (!canvasRef.current) return;
+      
+      const rect = canvasRef.current.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      
+      const state = animationStateRef.current;
+      
+      // Check if click hit any money bag
+      for (let i = 0; i < state.liquidations.length; i++) {
+        const bag = state.liquidations[i];
+        
+        if (!bag.isExploding && 
+            clickX >= bag.x && clickX <= bag.x + bag.width &&
+            clickY >= bag.y && clickY <= bag.y + bag.height) {
+          
+          // Create click explosion (different from platform catch or ground hit)
+          bag.isExploding = true;
+          bag.explosionTime = 0;
+          
+          // Create special click explosion particles
+          const particleCount = Math.min(40, Math.floor(bag.width / 2.5));
+          for (let j = 0; j < particleCount; j++) {
+            state.particles.push(createClickParticle(
+              bag.x + bag.width / 2,
+              bag.y + bag.height / 2,
+              bag.isLong
+            ));
+          }
+          
+          // Remove the bag from array since it's clicked
+          state.liquidations.splice(i, 1);
+          break; // Only explode one bag per click
+        }
+      }
+    };
+
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('click', handleCanvasClick);
+      return () => canvas.removeEventListener('click', handleCanvasClick);
+    }
   }, []);
 
   useEffect(() => {
@@ -163,6 +212,22 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       decay: Math.random() * 0.01 + 0.005, // Longer lasting celebration
       color: colors[Math.floor(Math.random() * colors.length)],
       size: Math.random() * 8 + 6, // Bigger celebration particles
+    };
+  }, []);
+
+  // Create special particle for clicked bags (different animation)
+  const createClickParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
+    const colors = ['#FF0080', '#8000FF', '#0080FF', '#FF8000', '#80FF00']; // Bright neon colors for clicks
+    return {
+      id: Math.random().toString(),
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 20, // Very fast radial spread
+      vy: (Math.random() - 0.5) * 20, // Equal up/down spread for click effect
+      life: 1,
+      decay: Math.random() * 0.02 + 0.01, // Medium lasting
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: Math.random() * 10 + 5, // Variable sizes for dynamic effect
     };
   }, []);
 
@@ -453,7 +518,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       ctx.fillStyle = '#87CEEB';
       ctx.font = '14px JetBrains Mono, monospace';
       ctx.textAlign = 'right';
-      ctx.fillText('Use ← → or A D keys to move platform', canvas.width - 20, canvas.height - 40);
+      ctx.fillText('Use ← → keys to move platform', canvas.width - 20, canvas.height - 60);
+      ctx.fillText('Click on money bags to explode them', canvas.width - 20, canvas.height - 40);
       ctx.restore();
     }
 

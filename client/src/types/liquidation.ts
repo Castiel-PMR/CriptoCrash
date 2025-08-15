@@ -29,6 +29,17 @@ export interface Particle {
   size: number;
 }
 
+export interface FireParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  size: number;
+  heat: number;
+}
+
 export interface AnimationState {
   liquidations: LiquidationBlock[];
   particles: Particle[];

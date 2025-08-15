@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Liquidation, Platform } from '@shared/schema';
-import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation';
+import { LiquidationBlock, Particle, AnimationState, FireParticle } from '../types/liquidation';
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
@@ -10,6 +10,7 @@ interface LiquidationCanvasProps {
 
 interface ExtendedAnimationState extends AnimationState {
   platform: Platform;
+  fireParticles: FireParticle[];
 }
 
 export function LiquidationCanvas({ 
@@ -32,6 +33,7 @@ export function LiquidationCanvas({
       score: 0,
       totalCaught: 0,
     },
+    fireParticles: [],
   });
 
   const processedLiquidations = useRef(new Set<string>());
@@ -359,8 +361,8 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if hit bottom
-    if (block.y + block.height >= canvas.height - 60) {
+    // Check if hit fire zone (bottom 80px)
+    if (block.y + block.height >= canvas.height - 80) {
       block.isExploding = true;
       block.explosionTime = 0;
 
@@ -374,6 +376,16 @@ export function LiquidationCanvas({
           block.isLong
         ));
       }
+
+      // Create fire burst particles when liquidation hits fire zone
+      const fireParticleCount = Math.min(15, Math.floor(block.width / 8));
+      for (let i = 0; i < fireParticleCount; i++) {
+        state.fireParticles.push(createFireParticle(
+          block.x + block.width / 2,
+          canvas.height - 40
+        ));
+      }
+      
       return true;
     }
 
@@ -391,6 +403,52 @@ export function LiquidationCanvas({
     
     return particle.life > 0;
   }, []);
+
+  // Create fire particle
+  const createFireParticle = useCallback((x: number, y: number): FireParticle => {
+    return {
+      x: x + (Math.random() - 0.5) * 40, // Spread fire particles
+      y: y + Math.random() * 10,
+      vx: (Math.random() - 0.5) * 2,
+      vy: -Math.random() * 3 - 1, // Move upward
+      life: 1,
+      maxLife: 1,
+      size: Math.random() * 6 + 3,
+      heat: Math.random(), // Controls color intensity
+    };
+  }, []);
+
+  // Update fire particle
+  const updateFireParticle = useCallback((particle: FireParticle, deltaTime: number): boolean => {
+    const frameMultiplier = deltaTime / 16.67;
+    particle.x += particle.vx * frameMultiplier;
+    particle.y += particle.vy * frameMultiplier;
+    particle.vy += 0.05 * frameMultiplier; // Light upward drift
+    particle.life -= 0.02 * frameMultiplier; // Fade out
+    particle.size *= Math.pow(0.995, frameMultiplier); // Shrink slowly
+    particle.heat -= 0.01 * frameMultiplier; // Cool down
+    
+    return particle.life > 0 && particle.size > 0.5;
+  }, []);
+
+  // Generate fire particles continuously
+  const generateFireParticles = useCallback((canvasWidth: number, canvasHeight: number) => {
+    const state = animationStateRef.current;
+    const fireZoneHeight = 80;
+    const fireZoneY = canvasHeight - fireZoneHeight;
+    
+    // Limit fire particles for performance (max 150)
+    if (state.fireParticles.length < 150) {
+      // Create 2-3 particles per frame
+      for (let i = 0; i < 3; i++) {
+        if (Math.random() < 0.8) { // 80% chance to create particle
+          const x = Math.random() * canvasWidth;
+          const y = fireZoneY + Math.random() * 20;
+          state.fireParticles.push(createFireParticle(x, y));
+        }
+      }
+    }
+  }, [createFireParticle]);
 
   // Draw money bag without dollar sign for better readability
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
@@ -565,6 +623,42 @@ export function LiquidationCanvas({
         ctx.fill();
       }
     }
+    
+    ctx.restore();
+  }, []);
+
+  // Draw fire particle
+  const drawFireParticle = useCallback((ctx: CanvasRenderingContext2D, particle: FireParticle) => {
+    ctx.save();
+    ctx.globalAlpha = particle.life;
+    
+    // Color based on heat (red-orange-yellow gradient)
+    let r, g, b;
+    if (particle.heat > 0.7) {
+      // Hot - white/yellow
+      r = 255;
+      g = 255;
+      b = Math.floor(150 + particle.heat * 105);
+    } else if (particle.heat > 0.4) {
+      // Medium - orange
+      r = 255;
+      g = Math.floor(100 + particle.heat * 155);
+      b = 0;
+    } else {
+      // Cool - red
+      r = 255;
+      g = Math.floor(particle.heat * 100);
+      b = 0;
+    }
+    
+    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    ctx.shadowColor = ctx.fillStyle;
+    ctx.shadowBlur = 4;
+    
+    // Draw flame-like shape
+    ctx.beginPath();
+    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    ctx.fill();
     
     ctx.restore();
   }, []);
@@ -794,6 +888,29 @@ export function LiquidationCanvas({
         return alive;
       });
 
+      // Generate and update fire particles
+      generateFireParticles(canvas.width, canvas.height);
+      state.fireParticles = state.fireParticles.filter(particle => {
+        const alive = updateFireParticle(particle, deltaTime);
+        if (alive) {
+          drawFireParticle(ctx, particle);
+        }
+        return alive;
+      });
+
+      // Draw fire zone background
+      const fireZoneHeight = 80;
+      const fireZoneY = canvas.height - fireZoneHeight;
+      ctx.save();
+      ctx.globalAlpha = 0.1;
+      const gradient = ctx.createLinearGradient(0, fireZoneY, 0, canvas.height);
+      gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
+      gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.3)');
+      gradient.addColorStop(1, 'rgba(255, 0, 0, 0.5)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, fireZoneY, canvas.width, fireZoneHeight);
+      ctx.restore();
+
       // Draw controls instructions
       ctx.save();
       ctx.fillStyle = '#87CEEB';
@@ -804,7 +921,7 @@ export function LiquidationCanvas({
     }
 
     requestAnimationFrame(animate);
-  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart]);
+  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart, generateFireParticles, updateFireParticle, drawFireParticle]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

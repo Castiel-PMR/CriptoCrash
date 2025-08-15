@@ -6,7 +6,15 @@ CryptoLiquidations is a real-time cryptocurrency liquidation monitoring applicat
 
 ## Recent Changes (August 2025)
 
-### Performance and Animation Optimizations
+### Mobile Responsiveness Update (August 15, 2025)
+- **Full mobile responsiveness implementation** - site now correctly displays on mobile devices and tablets
+- **Adaptive layout system** - main dashboard switches to vertical stack layout on mobile (canvas on top, controls below)
+- **Touch support for mobile** - added touch event handlers for tapping money bags on mobile devices
+- **Mobile-optimized UI components** - improved spacing, text sizes, and touch targets for mobile accessibility
+- **Responsive grid layouts** - filter buttons adapt from 3-column to 2-column layout on mobile screens
+- **Mobile-friendly headers** - stats header adjusts to vertical layout with proper text sizing for small screens
+
+### Performance and Animation Optimizations  
 - **Reduced animation speeds by 2-2.5x** for comfortable viewing experience (small liquidations: 2.0px/s, large: 0.6px/s)
 - **Fixed chart opacity affecting animation speed bug** by implementing ref-based state management for chartOpacity and showGrid
 - **Added page visibility API integration** to prevent animation buildup when tab is hidden - only real-time liquidations (max 10 seconds old) are displayed

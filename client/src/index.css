@@ -230,3 +230,82 @@
 .animate-bounce-subtle {
   animation: bounce-subtle 2s ease-in-out infinite;
 }
+
+/* Mobile responsiveness */
+@media (max-width: 1024px) {
+  /* Adjust text sizes for mobile */
+  .text-lg {
+    font-size: 1rem;
+  }
+  
+  .text-xl {
+    font-size: 1.125rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  /* Better spacing for mobile */
+  .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+  
+  /* Ensure touch targets are at least 44px */
+  button, input[type="checkbox"], input[type="range"] {
+    min-height: 44px;
+  }
+  
+  /* Canvas responsive sizing */
+  canvas {
+    touch-action: none; /* Prevent scrolling while touching canvas */
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Stack layout on smaller screens */
+  .min-h-screen {
+    min-height: 100svh; /* Use safe viewport height */
+  }
+  
+  /* Reduce padding on mobile */
+  .p-6 {
+    padding: 1rem;
+  }
+  
+  .p-4 {
+    padding: 0.75rem;
+  }
+  
+  /* Better text sizes for small screens */
+  .text-sm {
+    font-size: 0.875rem;
+  }
+  
+  .text-xs {
+    font-size: 0.75rem;
+  }
+  
+  /* Improve button grid on mobile */
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  
+  .lg\:grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  
+  /* Prevent body scroll on mobile when interacting with canvas */
+  body {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+}

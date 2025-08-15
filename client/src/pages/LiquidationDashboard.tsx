@@ -45,10 +45,10 @@ export default function LiquidationDashboard() {
         onTimeframeChange={setTimeframe}
       />
       
-      {/* Main Layout with Sidebar */}
-      <div className="flex h-screen pt-20">
+      {/* Main Layout with Sidebar - Mobile Responsive */}
+      <div className="flex flex-col lg:flex-row h-screen pt-20">
         {/* Main Canvas Area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative min-h-[60vh] lg:min-h-0">
           <LiquidationCanvas 
             liquidations={filteredLiquidations}
             isPaused={isPaused}
@@ -57,8 +57,8 @@ export default function LiquidationDashboard() {
           />
         </div>
         
-        {/* Right Sidebar */}
-        <div className="w-80 bg-cyber-gray/95 backdrop-blur-md border-l border-cyber-border p-4 space-y-4 overflow-y-auto">
+        {/* Right Sidebar - Mobile Responsive */}
+        <div className="w-full lg:w-80 bg-cyber-gray/95 backdrop-blur-md border-t lg:border-t-0 lg:border-l border-cyber-border p-4 space-y-4 overflow-y-auto max-h-[40vh] lg:max-h-none">
           {/* Liquidation Filter Panel */}
           <div className="bg-cyber-dark/50 rounded-lg border border-cyber-border p-4">
             <h3 className="text-lg font-semibold mb-3 text-accent-yellow">Liquidation Filter</h3>

@@ -405,16 +405,16 @@ export function LiquidationCanvas({
     };
   }, []);
 
-  // Mouse click handling
-  const handleCanvasClick = useCallback((e: MouseEvent) => {
+  // Handle interaction (mouse click or touch)
+  const handleCanvasInteraction = useCallback((clientX: number, clientY: number) => {
     if (!canvasRef.current) return;
     
     // Initialize audio context on first user interaction
     initAudioContext();
     
     const rect = canvasRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    const clickX = clientX - rect.left;
+    const clickY = clientY - rect.top;
     
     // Check if click is on mute button (bottom right corner)
     const buttonSize = 40;
@@ -457,18 +457,36 @@ export function LiquidationCanvas({
         
         // Remove the bag from array since it's clicked
         state.liquidations.splice(i, 1);
-        break; // Only explode one bag per click
+        break; // Only explode one bag per interaction
       }
     }
   }, [createClickParticle, isSoundMuted, initAudioContext]);
+
+  // Mouse click handling
+  const handleCanvasClick = useCallback((e: MouseEvent) => {
+    handleCanvasInteraction(e.clientX, e.clientY);
+  }, [handleCanvasInteraction]);
+
+  // Touch handling for mobile
+  const handleCanvasTouch = useCallback((e: TouchEvent) => {
+    e.preventDefault(); // Prevent scrolling
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      handleCanvasInteraction(touch.clientX, touch.clientY);
+    }
+  }, [handleCanvasInteraction]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.addEventListener('click', handleCanvasClick, { passive: false });
-      return () => canvas.removeEventListener('click', handleCanvasClick);
+      canvas.addEventListener('touchstart', handleCanvasTouch, { passive: false });
+      return () => {
+        canvas.removeEventListener('click', handleCanvasClick);
+        canvas.removeEventListener('touchstart', handleCanvasTouch);
+      };
     }
-  }, [handleCanvasClick]);
+  }, [handleCanvasClick, handleCanvasTouch]);
 
   // Update liquidation block
   const updateLiquidationBlock = useCallback((block: LiquidationBlock, deltaTime: number): boolean => {

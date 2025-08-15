@@ -337,11 +337,11 @@ export function LiquidationCanvas({
         vy = (Math.random() - 0.5) * speed;
         break;
         
-      case 5: // Rainbow explosion - радуга
-        colors = ['#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#0000FF', '#8000FF'];
-        speed = 16;
-        size = Math.random() * 8 + 4;
-        decay = 0.008;
+      case 5: // Cosmic explosion - космический взрыв
+        colors = ['#4B0082', '#8A2BE2', '#9370DB', '#BA55D3'];
+        speed = 18;
+        size = Math.random() * 10 + 4;
+        decay = 0.012;
         vx = (Math.random() - 0.5) * speed;
         vy = (Math.random() - 0.5) * speed;
         break;
@@ -441,7 +441,7 @@ export function LiquidationCanvas({
         bag.isExploding = true;
         bag.explosionTime = 0;
         
-        // Choose random explosion type (0-9)
+        // Choose random explosion type (0-9, excluding removed animations)
         const explosionType = Math.floor(Math.random() * 10);
         
         // Create special click explosion particles with random animation
@@ -547,7 +547,7 @@ export function LiquidationCanvas({
           state.cannonballs.splice(i, 1);
           
           // Use same explosion as mouse click with random type
-          const explosionType = Math.floor(Math.random() * 10) + 1;
+          const explosionType = Math.floor(Math.random() * 10);
           block.isExploding = true;
           block.explosionTime = 0;
           block.explosionType = explosionType;

@@ -24,7 +24,7 @@ const AnimationTest = () => {
     'Spiral explosion - спиральный взрыв',
     'Heart explosion - сердечки',
     'Lightning - молнии',
-    'Rainbow explosion - радуга',
+    'Cosmic explosion - космический взрыв',
     'Shockwave - ударная волна',
     'Flower petals - лепестки цветов',
     'Ice crystals - ледяные кристаллы',
@@ -84,11 +84,11 @@ const AnimationTest = () => {
         vy = (Math.random() - 0.5) * speed;
         break;
         
-      case 5: // Rainbow explosion
-        colors = ['#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#0000FF', '#8000FF'];
-        speed = 16;
-        size = Math.random() * 8 + 4;
-        decay = 0.008;
+      case 5: // Cosmic explosion
+        colors = ['#4B0082', '#8A2BE2', '#9370DB', '#BA55D3'];
+        speed = 18;
+        size = Math.random() * 10 + 4;
+        decay = 0.012;
         vx = (Math.random() - 0.5) * speed;
         vy = (Math.random() - 0.5) * speed;
         break;

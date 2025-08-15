@@ -392,7 +392,7 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Draw money bag with improved text readability
+  // Draw simple money bag like in the reference image
   const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
     ctx.save();
     ctx.globalAlpha = block.opacity;
@@ -400,81 +400,68 @@ export function LiquidationCanvas({
 
     const bagWidth = block.width;
     const bagHeight = block.height;
-    const neckHeight = bagHeight * 0.15;
+    const neckHeight = bagHeight * 0.2;
     
-    // Drop shadow for depth
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 3;
+    // Simple drop shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 4;
     
-    // Main bag body (rounded rectangle)
+    // Main bag body - simple rounded rectangle like in image
     ctx.beginPath();
-    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.1);
+    ctx.roundRect(-bagWidth/2, -bagHeight/2 + neckHeight, bagWidth, bagHeight - neckHeight, bagWidth * 0.15);
     
-    // Enhanced gradient fill
-    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, bagWidth/2);
+    // Simple gradient - brown/tan color like in reference
+    const gradient = ctx.createRadialGradient(-bagWidth/4, -bagHeight/4, 0, 0, 0, bagWidth/1.5);
     if (block.isLong) {
-      gradient.addColorStop(0, '#CD853F'); // Lighter brown
-      gradient.addColorStop(0.5, '#8B4513'); // Brown for long liquidations
-      gradient.addColorStop(0.8, '#654321');
-      gradient.addColorStop(1, '#3C2415');
+      gradient.addColorStop(0, '#D2B48C'); // Light tan
+      gradient.addColorStop(0.6, '#B8860B'); // Dark goldenrod
+      gradient.addColorStop(1, '#8B7355');   // Darker brown
     } else {
-      gradient.addColorStop(0, '#32CD32'); // Lighter green
-      gradient.addColorStop(0.5, '#228B22'); // Green for short liquidations
-      gradient.addColorStop(0.8, '#1F5F1F');
-      gradient.addColorStop(1, '#0D2B0D');
+      gradient.addColorStop(0, '#90EE90'); // Light green
+      gradient.addColorStop(0.6, '#32CD32'); // Lime green
+      gradient.addColorStop(1, '#228B22');   // Forest green
     }
     
     ctx.fillStyle = gradient;
     ctx.fill();
     
-    // Bag neck/tie
+    // Remove shadow for other elements
     ctx.shadowBlur = 0;
+    
+    // Simple bag neck - like in reference image
     ctx.beginPath();
-    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.3, neckHeight, 0, 0, Math.PI * 2);
-    ctx.fillStyle = block.isLong ? '#654321' : '#1F5F1F';
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.25, neckHeight * 0.8, 0, 0, Math.PI * 2);
+    ctx.fillStyle = block.isLong ? '#8B7355' : '#1F5F1F';
     ctx.fill();
     
-    // Rope/string on neck
-    ctx.strokeStyle = '#8B4513';
-    ctx.lineWidth = 2;
+    // Simple rope tie
+    ctx.strokeStyle = '#654321';
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.32, neckHeight * 1.1, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, -bagHeight/2 + neckHeight/2, bagWidth * 0.28, neckHeight * 0.9, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Enhanced text with maximum readability
-    ctx.shadowBlur = 0;
+    // Clean, readable text like in reference
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Coin symbol with high contrast and glow
-    const coinFontSize = Math.max(14, bagWidth * 0.18);
-    ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;
+    // Coin symbol - clean and simple
+    const coinFontSize = Math.max(16, bagWidth * 0.2);
+    ctx.font = `bold ${coinFontSize}px sans-serif`;
     
-    // Strong white background for coin text
-    ctx.shadowColor = '#FFFFFF';
-    ctx.shadowBlur = 8;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(block.coin, 0, -bagHeight * 0.05);
-    
-    // Multiple stroke layers for maximum contrast
-    ctx.shadowBlur = 0;
+    // Simple white text with dark outline
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.strokeText(block.coin, 0, -bagHeight * 0.05);
+    ctx.lineWidth = 3;
+    ctx.strokeText(block.coin, 0, -bagHeight * 0.1);
     
-    ctx.strokeStyle = block.isLong ? '#8B4513' : '#228B22';
-    ctx.lineWidth = 2;
-    ctx.strokeText(block.coin, 0, -bagHeight * 0.05);
-    
-    // Final white fill
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(block.coin, 0, -bagHeight * 0.05);
+    ctx.fillText(block.coin, 0, -bagHeight * 0.1);
 
-    // Amount text with maximum readability
-    const amountFontSize = Math.max(12, bagWidth * 0.16);
-    ctx.font = `bold ${amountFontSize}px JetBrains Mono, monospace`;
+    // Amount text - clean formatting like reference
+    const amountFontSize = Math.max(14, bagWidth * 0.18);
+    ctx.font = `bold ${amountFontSize}px sans-serif`;
     let formattedAmount;
     if (block.amount >= 1000000) {
       formattedAmount = (block.amount / 1000000).toFixed(1) + 'M';
@@ -484,25 +471,13 @@ export function LiquidationCanvas({
       formattedAmount = block.amount.toFixed(0);
     }
     
-    // Strong white glow for amount
-    ctx.shadowColor = '#FFFFFF';
-    ctx.shadowBlur = 8;
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
-    
-    // Multiple stroke layers for contrast
-    ctx.shadowBlur = 0;
+    // Simple white text with outline
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.strokeText(formattedAmount, 0, bagHeight * 0.25);
+    ctx.lineWidth = 3;
+    ctx.strokeText(formattedAmount, 0, bagHeight * 0.2);
     
-    ctx.strokeStyle = block.isLong ? '#8B4513' : '#228B22';
-    ctx.lineWidth = 2;
-    ctx.strokeText(formattedAmount, 0, bagHeight * 0.25);
-    
-    // Final bright white fill
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillText(formattedAmount, 0, bagHeight * 0.25);
+    ctx.fillText(formattedAmount, 0, bagHeight * 0.2);
 
     ctx.restore();
   }, []);

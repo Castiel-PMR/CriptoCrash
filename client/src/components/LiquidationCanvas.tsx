@@ -545,13 +545,28 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
   // Real Bitcoin candlestick data from Binance with animation state
   const [bitcoinCandles, setBitcoinCandles] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
+  const [timeframe, setTimeframe] = useState<string>('30m');
+  
+  // Timeframe options
+  const timeframeOptions = [
+    { value: '1m', label: '1м', limit: 60 },
+    { value: '5m', label: '5м', limit: 60 },
+    { value: '15m', label: '15м', limit: 48 },
+    { value: '30m', label: '30м', limit: 48 },
+    { value: '1h', label: '1ч', limit: 24 },
+    { value: '4h', label: '4ч', limit: 24 },
+    { value: '1d', label: '1д', limit: 30 }
+  ];
   
   // Fetch real Bitcoin data
   useEffect(() => {
     const fetchBitcoinData = async () => {
       try {
-        // Get 48 30-minute candles for more granular real-time updates
-        const response = await fetch('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=30m&limit=48');
+        const selectedTimeframe = timeframeOptions.find(tf => tf.value === timeframe);
+        const limit = selectedTimeframe?.limit || 48;
+        
+        // Get candlestick data based on selected timeframe
+        const response = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=${timeframe}&limit=${limit}`);
         const data = await response.json();
         
         // Convert to OHLCV format
@@ -566,7 +581,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
         
         setBitcoinCandles(candles);
         setLastUpdateTime(Date.now());
-        console.log('Обновлены данные Bitcoin:', candles.length, 'свечей (30m интервал)');
+        console.log('Обновлены данные Bitcoin:', candles.length, `свечей (${timeframe} интервал)`);
       } catch (error) {
         console.error('Ошибка загрузки данных Bitcoin:', error);
         // Fallback to previous static data if API fails
@@ -589,10 +604,10 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     
     fetchBitcoinData();
     
-    // Update every 15 seconds for real-time feel
-    const interval = setInterval(fetchBitcoinData, 15 * 1000);
+    // Update every 30 seconds for real-time feel
+    const interval = setInterval(fetchBitcoinData, 30 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [timeframe]);
 
   // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -818,6 +833,28 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
         tabIndex={0}
         style={{ outline: 'none' }}
       />
+      
+      {/* Timeframe Selector */}
+      <div className="absolute top-4 left-4 z-10">
+        <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-2">
+          <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
+          {timeframeOptions.map((tf) => (
+            <button
+              key={tf.value}
+              onClick={() => setTimeframe(tf.value)}
+              className={`
+                px-2 py-1 text-xs font-mono rounded transition-all duration-200
+                ${timeframe === tf.value 
+                  ? 'bg-accent-blue text-black font-bold' 
+                  : 'text-gray-300 hover:text-white hover:bg-white/10'
+                }
+              `}
+            >
+              {tf.label}
+            </button>
+          ))}
+        </div>
+      </div>
       
       {/* Impact Zone Indicator */}
       <div className="absolute bottom-0 left-0 right-0 h-16 impact-zone pointer-events-none">

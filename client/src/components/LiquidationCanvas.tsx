@@ -427,18 +427,14 @@ export function LiquidationCanvas({
     if (block.y + block.height >= canvas.height * 0.7) {
       const state = animationStateRef.current;
       const leftCannon = state.leftCannon;
-      const rightCannon = state.rightCannon;
       
-      // Fire cannon if neither is currently firing
-      if (!leftCannon.isFiring && !rightCannon.isFiring) {
+      // Fire left cannon only if it's not currently firing
+      if (!leftCannon.isFiring) {
         const bagCenterX = block.x + block.width / 2;
         const bagCenterY = block.y + block.height / 2;
         
-        // Choose cannon that fires at FARTHER targets from itself
-        const leftDistance = Math.abs(bagCenterX - leftCannon.x);
-        const rightDistance = Math.abs(bagCenterX - rightCannon.x);
-        
-        const activeCannon = leftDistance > rightDistance ? leftCannon : rightCannon;
+        // Only use left cannon now
+        const activeCannon = leftCannon;
         
         // Calculate angle and fire
         const dx = bagCenterX - activeCannon.x;
@@ -533,28 +529,24 @@ export function LiquidationCanvas({
     return particle.life > 0;
   }, []);
 
-  // Update cannons
+  // Update cannon (only left one)
   const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
     const state = animationStateRef.current;
     
-    // Position cannons
+    // Position left cannon only
     state.leftCannon.x = 50;
     state.leftCannon.y = canvasHeight - 60;
-    state.rightCannon.x = canvasWidth - 50;
-    state.rightCannon.y = canvasHeight - 60;
     
-    // Update firing animation
-    [state.leftCannon, state.rightCannon].forEach(cannon => {
-      if (cannon.isFiring) {
-        cannon.fireProgress += deltaTime * 0.02;
-        
-        if (cannon.fireProgress >= 1) {
-          cannon.isFiring = false;
-          cannon.fireProgress = 0;
-          cannon.targetBag = null;
-        }
+    // Update firing animation for left cannon only
+    if (state.leftCannon.isFiring) {
+      state.leftCannon.fireProgress += deltaTime * 0.02;
+      
+      if (state.leftCannon.fireProgress >= 1) {
+        state.leftCannon.isFiring = false;
+        state.leftCannon.fireProgress = 0;
+        state.leftCannon.targetBag = null;
       }
-    });
+    }
   }, []);
 
   // Create cannonball
@@ -1181,10 +1173,9 @@ export function LiquidationCanvas({
         return alive;
       });
 
-      // Update and draw cannons
+      // Update and draw left cannon only
       updateCannons(canvas.width, canvas.height, deltaTime);
       drawCannon(ctx, state.leftCannon);
-      drawCannon(ctx, state.rightCannon);
 
       // Update and draw cannonballs
       updateCannonballs(deltaTime);

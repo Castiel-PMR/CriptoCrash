@@ -788,7 +788,7 @@ export function LiquidationCanvas({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Draw Bitcoin chart background (dimmed) - using current values directly
-      if (bitcoinCandles.length > 0) {
+      if (bitcoinCandles && bitcoinCandles.length > 0) {
         ctx.save();
         
         const margin = 20;
@@ -829,8 +829,9 @@ export function LiquidationCanvas({
             }
           }
           
-          // Draw candlesticks with current opacity
-          ctx.globalAlpha = chartOpacity / 100;
+          // Draw candlesticks with current opacity  
+          const actualOpacity = Math.max(0.1, chartOpacity / 100); // Minimum 10% для видимости
+          ctx.globalAlpha = actualOpacity;
           
           const candleWidth = Math.max(6, chartWidth / bitcoinCandles.length * 0.7);
           const candleSpacing = chartWidth / bitcoinCandles.length;

@@ -5,13 +5,20 @@ import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
   isPaused: boolean;
+  showGrid?: boolean;
+  chartOpacity?: number;
 }
 
 interface ExtendedAnimationState extends AnimationState {
   platform: Platform;
 }
 
-export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasProps) {
+export function LiquidationCanvas({ 
+  liquidations, 
+  isPaused, 
+  showGrid = true, 
+  chartOpacity = 12 
+}: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStateRef = useRef<ExtendedAnimationState>({
     liquidations: [],
@@ -546,7 +553,6 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
   const [bitcoinCandles, setBitcoinCandles] = useState<any[]>([]);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
   const [timeframe, setTimeframe] = useState<string>('30m');
-  const [showGrid, setShowGrid] = useState<boolean>(true);
   
   // Timeframe options
   const timeframeOptions = [
@@ -649,8 +655,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       }
     }
     
-    // Draw candlesticks in monochrome style - very subtle background
-    ctx.globalAlpha = 0.12;
+    // Draw candlesticks in monochrome style - configurable opacity
+    ctx.globalAlpha = chartOpacity / 100;
     
     const candleWidth = Math.max(6, width / bitcoinCandles.length * 0.7);
     const candleSpacing = width / bitcoinCandles.length;
@@ -744,7 +750,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     }
     
     ctx.restore();
-  }, [bitcoinCandles]);
+  }, [bitcoinCandles, showGrid, chartOpacity]);
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {
@@ -841,45 +847,25 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
         style={{ outline: 'none' }}
       />
       
-      {/* Chart Controls */}
+      {/* Timeframe Selector */}
       <div className="absolute top-4 left-4 z-10">
-        <div className="flex flex-col gap-2">
-          {/* Timeframe Selector */}
-          <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-2">
-            <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
-            {timeframeOptions.map((tf) => (
-              <button
-                key={tf.value}
-                onClick={() => setTimeframe(tf.value)}
-                className={`
-                  px-2 py-1 text-xs font-mono rounded transition-all duration-200
-                  ${timeframe === tf.value 
-                    ? 'bg-accent-blue text-black font-bold' 
-                    : 'text-gray-300 hover:text-white hover:bg-white/10'
-                  }
-                `}
-              >
-                {tf.label}
-              </button>
-            ))}
-          </div>
-          
-          {/* Grid Toggle */}
-          <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-lg p-2">
-            <span className="text-xs text-gray-400 font-mono">Сетка:</span>
+        <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm rounded-lg p-2">
+          <span className="text-xs text-gray-400 font-mono mr-2">График:</span>
+          {timeframeOptions.map((tf) => (
             <button
-              onClick={() => setShowGrid(!showGrid)}
+              key={tf.value}
+              onClick={() => setTimeframe(tf.value)}
               className={`
                 px-2 py-1 text-xs font-mono rounded transition-all duration-200
-                ${showGrid 
+                ${timeframe === tf.value 
                   ? 'bg-accent-blue text-black font-bold' 
                   : 'text-gray-300 hover:text-white hover:bg-white/10'
                 }
               `}
             >
-              {showGrid ? 'ВКЛ' : 'ВЫКЛ'}
+              {tf.label}
             </button>
-          </div>
+          ))}
         </div>
       </div>
       

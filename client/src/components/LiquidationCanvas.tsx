@@ -71,6 +71,32 @@ export function LiquidationCanvas({
   const [showFlashText, setShowFlashText] = useState(false);
   const [isFlashing, setIsFlashing] = useState(false);
 
+  // Laser sound effect
+  const playLaserSound = useCallback((isLeftCannon: boolean) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Different frequencies for different cannons
+      const frequency = isLeftCannon ? 800 : 600; // Higher pitch for left (blue), lower for right (red)
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.3, audioContext.currentTime + 0.15);
+      
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+      
+      oscillator.type = 'sawtooth';
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.15);
+    } catch (error) {
+      // Silent fail if audio context not supported
+    }
+  }, []);
+
   // Effect for text flashing animation
   useEffect(() => {
     if (showFlashText) {
@@ -422,7 +448,7 @@ export function LiquidationCanvas({
         activeCannon.fireProgress = 0;
         activeCannon.targetBag = block.id;
         
-        // Create cannonball
+        // Create laser beam
         const distance = Math.sqrt(dx * dx + dy * dy);
         const speed = 8;
         state.cannonballs.push({
@@ -433,6 +459,9 @@ export function LiquidationCanvas({
           targetBagId: block.id,
           life: 300,
         });
+        
+        // Play laser sound effect
+        playLaserSound(activeCannon.side === 'left');
       }
     }
 
@@ -836,18 +865,43 @@ export function LiquidationCanvas({
       ctx.stroke();
     }
     
-    // Plasma muzzle flash when firing
-    if (cannon.isFiring && cannon.fireProgress < 0.3) {
-      const flashGradient = ctx.createRadialGradient(barrelLength + 10, 0, 0, barrelLength + 10, 0, 25);
-      flashGradient.addColorStop(0, '#fbbf24'); // Yellow center
-      flashGradient.addColorStop(0.5, '#f59e0b'); // Orange
-      flashGradient.addColorStop(1, '#dc2626'); // Red edge
+    // Laser muzzle flash when firing (Star Wars style)
+    if (cannon.isFiring && cannon.fireProgress < 0.4) {
+      const laserColor = cannon.side === 'left' ? '#00BFFF' : '#FF0000'; // Blue for left, red for right
+      const glowColor = cannon.side === 'left' ? '#87CEEB' : '#FF6B6B';
       
-      ctx.fillStyle = flashGradient;
-      ctx.globalAlpha = 1 - cannon.fireProgress * 3;
+      // Outer glow
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = glowColor;
+      ctx.globalAlpha = (1 - cannon.fireProgress * 2.5) * 0.4;
       ctx.beginPath();
-      ctx.arc(barrelLength + 10, 0, 25, 0, Math.PI * 2);
+      ctx.arc(barrelLength + 15, 0, 30, 0, Math.PI * 2);
       ctx.fill();
+      
+      // Middle glow
+      ctx.shadowBlur = 10;
+      ctx.globalAlpha = (1 - cannon.fireProgress * 2.5) * 0.7;
+      ctx.beginPath();
+      ctx.arc(barrelLength + 10, 0, 20, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Core laser flash
+      ctx.shadowBlur = 5;
+      ctx.fillStyle = laserColor;
+      ctx.globalAlpha = 1 - cannon.fireProgress * 2.5;
+      ctx.beginPath();
+      ctx.arc(barrelLength + 8, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Bright white center
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = (1 - cannon.fireProgress * 2.5) * 0.8;
+      ctx.beginPath();
+      ctx.arc(barrelLength + 6, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+      
       ctx.globalAlpha = 1;
     }
     
@@ -856,20 +910,44 @@ export function LiquidationCanvas({
     ctx.restore();
   }, []);
 
-  // Draw cannonball
+  // Draw laser beam (Star Wars style)
   const drawCannonball = useCallback((ctx: CanvasRenderingContext2D, ball: Cannonball) => {
     ctx.save();
-    ctx.fillStyle = '#2F4F4F'; // Dark iron color
-    ctx.shadowColor = '#000000';
-    ctx.shadowBlur = 5;
+    
+    // Determine laser color based on cannon side
+    const isLeftCannon = ball.x < window.innerWidth / 2;
+    const laserColor = isLeftCannon ? '#00BFFF' : '#FF0000'; // Blue for left, red for right
+    const glowColor = isLeftCannon ? '#87CEEB' : '#FF6B6B';
+    
+    // Outer glow
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = glowColor;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 12, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Middle glow
+    ctx.shadowBlur = 8;
+    ctx.globalAlpha = 0.6;
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, 8, 0, Math.PI * 2);
     ctx.fill();
     
-    // Highlight for 3D effect
-    ctx.fillStyle = '#696969';
+    // Core laser beam
+    ctx.shadowBlur = 3;
+    ctx.fillStyle = laserColor;
+    ctx.globalAlpha = 1;
     ctx.beginPath();
-    ctx.arc(ball.x - 2, ball.y - 2, 3, 0, Math.PI * 2);
+    ctx.arc(ball.x, ball.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Bright center
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 2, 0, Math.PI * 2);
     ctx.fill();
     
     ctx.restore();

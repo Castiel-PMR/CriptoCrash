@@ -839,6 +839,8 @@ export function LiquidationCanvas({
             const x = index * candleSpacing + candleSpacing / 2;
             const openY = margin + ((maxPrice - candle.open) / priceRange) * chartHeight;
             const closeY = margin + ((maxPrice - candle.close) / priceRange) * chartHeight;
+            const highY = margin + ((maxPrice - candle.high) / priceRange) * chartHeight;
+            const lowY = margin + ((maxPrice - candle.low) / priceRange) * chartHeight;
             
             const isGreen = candle.close >= candle.open;
             
@@ -851,26 +853,47 @@ export function LiquidationCanvas({
               ctx.strokeStyle = '#333333';
             }
             
+            ctx.lineWidth = 0.5;
+            
+            // Draw shadows (high/low lines)
+            ctx.beginPath();
+            ctx.moveTo(x, highY);
+            ctx.lineTo(x, lowY);
+            ctx.stroke();
+            
             // Draw candle body
             const bodyTop = Math.min(openY, closeY);
             const bodyHeight = Math.max(2, Math.abs(closeY - openY));
             
             if (bodyHeight < 3) {
-              // Doji
-              ctx.lineWidth = 0.5;
+              // Doji - draw cross line
               ctx.beginPath();
               ctx.moveTo(x - candleWidth/2, openY);
               ctx.lineTo(x + candleWidth/2, openY);
               ctx.stroke();
             } else {
               if (isGreen) {
-                ctx.lineWidth = 0.5;
+                // Hollow candle for bullish (green)
                 ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
               } else {
+                // Filled candle for bearish (red)
                 ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
               }
             }
           });
+          
+          // Draw LIVE indicator
+          ctx.globalAlpha = 1;
+          ctx.font = 'bold 12px JetBrains Mono, monospace';
+          ctx.fillStyle = '#00ff88';
+          ctx.beginPath();
+          ctx.arc(canvas.width - 120, 15, 3, 0, Math.PI * 2);
+          ctx.fill();
+          
+          ctx.globalAlpha = 0.3;
+          ctx.fillStyle = '#666666';
+          ctx.textAlign = 'right';
+          ctx.fillText('LIVE', canvas.width - 130, 20);
           
           ctx.restore();
         }

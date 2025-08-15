@@ -87,13 +87,9 @@ export function LiquidationCanvas({
         // When page becomes visible, update the last visible time
         lastVisibleTime.current = Date.now();
         
-        // Don't clear processed liquidations to prevent duplicates
-        // Just clear existing animations that might have accumulated
-        const state = animationStateRef.current;
-        state.liquidations = [];
-        state.particles = [];
-        
-        console.log('Page visible - cleared accumulated liquidations');
+        // Keep existing animations running - don't clear them
+        // Only prevent new old liquidations from being added
+        console.log('Page visible - keeping existing animations');
       }
     };
 

@@ -433,7 +433,7 @@ export function LiquidationCanvas({
       const leftCannon = state.leftCannon;
       
       // Random chance to fire at any point within the range
-      const shouldFire = Math.random() < 0.02; // 2% chance per frame to fire at bags in range (more random timing)
+      const shouldFire = Math.random() < 0.005; // 0.5% chance per frame to fire at bags in range (much more random timing)
       
       // Fire left cannon only if it's not currently firing and random chance succeeds
       if (!leftCannon.isFiring && shouldFire) {

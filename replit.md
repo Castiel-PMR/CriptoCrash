@@ -17,6 +17,9 @@ CryptoLiquidations is a real-time cryptocurrency liquidation monitoring applicat
 - **Chart transparency controls** working independently from animation system
 - **Grid toggle functionality** accessible through Settings modal
 - **Professional monochrome chart styling** with hollow/filled candlesticks for clear background appearance
+- **Simplified to single cannon system** - removed right cannon, left cannon handles all targets
+- **Smart destruction range** - cannon targets bags in lower 55% of screen, giving users chance for manual destruction
+- **Random firing pattern** - 70% chance to fire at bags in range for more dynamic gameplay
 
 ### Money Bag Visual Design - STABLE VERSION (August 15, 2025)
 - **Finalized money bag design** - simple rounded rectangle bags with classic gradient styling

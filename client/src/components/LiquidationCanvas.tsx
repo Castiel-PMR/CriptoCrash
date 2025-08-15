@@ -423,13 +423,17 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if bag is low enough for cannon firing (lower part of screen)
-    if (block.y + block.height >= canvas.height * 0.7) {
+    // Check if bag is in cannon's destruction range (from bottom to middle-lower part)
+    const cannonRange = canvas.height * 0.55; // Range from bottom to 55% of screen height (gives chance for manual destruction)
+    if (block.y + block.height >= cannonRange) {
       const state = animationStateRef.current;
       const leftCannon = state.leftCannon;
       
-      // Fire left cannon only if it's not currently firing
-      if (!leftCannon.isFiring) {
+      // Random chance to fire - not every bag, gives more dynamic feeling
+      const shouldFire = Math.random() < 0.7; // 70% chance to fire at bags in range
+      
+      // Fire left cannon only if it's not currently firing and random chance succeeds
+      if (!leftCannon.isFiring && shouldFire) {
         const bagCenterX = block.x + block.width / 2;
         const bagCenterY = block.y + block.height / 2;
         

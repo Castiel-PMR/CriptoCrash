@@ -443,6 +443,10 @@ export function LiquidationCanvas({
     
     // Removed dollar sign for better coin symbol and amount readability
 
+    // Ensure text is centered
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
     // Coin symbol with outline (top position)
     const coinFontSize = Math.max(10, bagWidth * 0.12);
     ctx.font = `bold ${coinFontSize}px JetBrains Mono, monospace`;

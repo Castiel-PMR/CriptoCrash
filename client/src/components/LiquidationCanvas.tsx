@@ -31,6 +31,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
   });
 
   const [keys, setKeys] = useState({ left: false, right: false });
+  const [clickScore, setClickScore] = useState({ score: 0, count: 0 });
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -54,31 +55,37 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
       if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        console.log('Left arrow pressed');
         setKeys(prev => ({ ...prev, left: true }));
       }
       if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        console.log('Right arrow pressed');
         setKeys(prev => ({ ...prev, right: true }));
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      e.preventDefault();
       if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        console.log('Left arrow released');
         setKeys(prev => ({ ...prev, left: false }));
       }
       if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        console.log('Right arrow released');
         setKeys(prev => ({ ...prev, right: false }));
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, []);
 
@@ -104,6 +111,12 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
           // Create click explosion (different from platform catch or ground hit)
           bag.isExploding = true;
           bag.explosionTime = 0;
+          
+          // Update click score
+          setClickScore(prev => ({
+            score: prev.score + bag.amount,
+            count: prev.count + 1
+          }));
           
           // Create special click explosion particles
           const particleCount = Math.min(40, Math.floor(bag.width / 2.5));
@@ -480,9 +493,11 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       const platformSpeed = 8 * animationSpeed;
       if (keys.left && state.platform.x > 0) {
         state.platform.x -= platformSpeed;
+        console.log('Platform moving left:', state.platform.x);
       }
       if (keys.right && state.platform.x < canvas.width - state.platform.width) {
         state.platform.x += platformSpeed;
+        console.log('Platform moving right:', state.platform.x);
       }
 
       // Update and draw liquidations
@@ -511,8 +526,13 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       ctx.fillStyle = '#FFD700';
       ctx.font = 'bold 16px JetBrains Mono, monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(`Score: $${(state.platform.score / 1000000).toFixed(1)}M`, 20, canvas.height - 80);
-      ctx.fillText(`Caught: ${state.platform.totalCaught}`, 20, canvas.height - 60);
+      ctx.fillText(`Platform Score: $${(state.platform.score / 1000000).toFixed(1)}M`, 20, canvas.height - 100);
+      ctx.fillText(`Platform Caught: ${state.platform.totalCaught}`, 20, canvas.height - 80);
+      
+      // Draw click score
+      ctx.fillStyle = '#FF0080';
+      ctx.fillText(`Click Score: $${(clickScore.score / 1000000).toFixed(1)}M`, 20, canvas.height - 60);
+      ctx.fillText(`Clicked: ${clickScore.count}`, 20, canvas.height - 40);
       
       // Draw controls instructions
       ctx.fillStyle = '#87CEEB';
@@ -524,7 +544,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     }
 
     requestAnimationFrame(animate);
-  }, [animationSpeed, isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle]);
+  }, [animationSpeed, isPaused, keys, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawPlatform, clickScore]);
 
   // Add new liquidations to animation
   useEffect(() => {

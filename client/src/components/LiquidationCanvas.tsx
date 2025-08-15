@@ -361,8 +361,8 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if hit fire zone (bottom 80px)
-    if (block.y + block.height >= canvas.height - 80) {
+    // Check if hit fire zone (bottom 120px)
+    if (block.y + block.height >= canvas.height - 120) {
       block.isExploding = true;
       block.explosionTime = 0;
 
@@ -377,12 +377,12 @@ export function LiquidationCanvas({
         ));
       }
 
-      // Create fire burst particles when liquidation hits fire zone
-      const fireParticleCount = Math.min(15, Math.floor(block.width / 8));
+      // Create intense fire burst when liquidation hits fire zone
+      const fireParticleCount = Math.min(25, Math.floor(block.width / 6));
       for (let i = 0; i < fireParticleCount; i++) {
         state.fireParticles.push(createFireParticle(
           block.x + block.width / 2,
-          canvas.height - 40
+          canvas.height - 60
         ));
       }
       
@@ -407,14 +407,14 @@ export function LiquidationCanvas({
   // Create fire particle
   const createFireParticle = useCallback((x: number, y: number): FireParticle => {
     return {
-      x: x + (Math.random() - 0.5) * 40, // Spread fire particles
-      y: y + Math.random() * 10,
-      vx: (Math.random() - 0.5) * 2,
-      vy: -Math.random() * 3 - 1, // Move upward
+      x: x + (Math.random() - 0.5) * 60, // Wider spread
+      y: y + Math.random() * 15,
+      vx: (Math.random() - 0.5) * 3,
+      vy: -Math.random() * 5 - 2, // Faster upward movement
       life: 1,
       maxLife: 1,
-      size: Math.random() * 6 + 3,
-      heat: Math.random(), // Controls color intensity
+      size: Math.random() * 12 + 4, // Larger flames
+      heat: 0.8 + Math.random() * 0.2, // Start hot
     };
   }, []);
 
@@ -423,27 +423,28 @@ export function LiquidationCanvas({
     const frameMultiplier = deltaTime / 16.67;
     particle.x += particle.vx * frameMultiplier;
     particle.y += particle.vy * frameMultiplier;
-    particle.vy += 0.05 * frameMultiplier; // Light upward drift
-    particle.life -= 0.02 * frameMultiplier; // Fade out
-    particle.size *= Math.pow(0.995, frameMultiplier); // Shrink slowly
-    particle.heat -= 0.01 * frameMultiplier; // Cool down
+    particle.vy += 0.08 * frameMultiplier; // Light upward drift (wind effect)
+    particle.vx *= Math.pow(0.99, frameMultiplier); // Slow down horizontal movement
+    particle.life -= 0.015 * frameMultiplier; // Slower fade for longer flames
+    particle.size *= Math.pow(0.992, frameMultiplier); // Slower shrinking
+    particle.heat -= 0.008 * frameMultiplier; // Cool down gradually
     
-    return particle.life > 0 && particle.size > 0.5;
+    return particle.life > 0 && particle.size > 1;
   }, []);
 
   // Generate fire particles continuously
   const generateFireParticles = useCallback((canvasWidth: number, canvasHeight: number) => {
     const state = animationStateRef.current;
-    const fireZoneHeight = 80;
+    const fireZoneHeight = 120; // Taller fire zone
     const fireZoneY = canvasHeight - fireZoneHeight;
     
-    // Limit fire particles for performance (max 150)
-    if (state.fireParticles.length < 150) {
-      // Create 2-3 particles per frame
-      for (let i = 0; i < 3; i++) {
-        if (Math.random() < 0.8) { // 80% chance to create particle
+    // Limit fire particles for performance (max 200 for denser fire)
+    if (state.fireParticles.length < 200) {
+      // Create 4-6 particles per frame for denser fire
+      for (let i = 0; i < 6; i++) {
+        if (Math.random() < 0.9) { // 90% chance to create particle
           const x = Math.random() * canvasWidth;
-          const y = fireZoneY + Math.random() * 20;
+          const y = canvasHeight - Math.random() * 30; // Start from bottom
           state.fireParticles.push(createFireParticle(x, y));
         }
       }
@@ -630,35 +631,57 @@ export function LiquidationCanvas({
   // Draw fire particle
   const drawFireParticle = useCallback((ctx: CanvasRenderingContext2D, particle: FireParticle) => {
     ctx.save();
-    ctx.globalAlpha = particle.life;
+    ctx.globalAlpha = particle.life * 0.8;
     
-    // Color based on heat (red-orange-yellow gradient)
+    // More realistic fire colors based on heat
     let r, g, b;
-    if (particle.heat > 0.7) {
-      // Hot - white/yellow
+    if (particle.heat > 0.8) {
+      // Very hot - bright yellow/white core
       r = 255;
       g = 255;
-      b = Math.floor(150 + particle.heat * 105);
-    } else if (particle.heat > 0.4) {
+      b = Math.floor(200 + particle.heat * 55);
+    } else if (particle.heat > 0.6) {
+      // Hot - yellow/orange
+      r = 255;
+      g = Math.floor(150 + particle.heat * 105);
+      b = Math.floor(particle.heat * 50);
+    } else if (particle.heat > 0.3) {
       // Medium - orange
       r = 255;
-      g = Math.floor(100 + particle.heat * 155);
+      g = Math.floor(50 + particle.heat * 150);
       b = 0;
     } else {
       // Cool - red
-      r = 255;
-      g = Math.floor(particle.heat * 100);
+      r = Math.floor(200 + particle.heat * 55);
+      g = Math.floor(particle.heat * 80);
       b = 0;
     }
     
     ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
     ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 4;
+    ctx.shadowBlur = Math.floor(particle.size * 0.8);
     
-    // Draw flame-like shape
+    // Draw flame-like teardrop shape instead of circle
+    const size = particle.size;
     ctx.beginPath();
-    ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+    
+    // Create flame shape (teardrop)
+    ctx.moveTo(particle.x, particle.y + size);
+    ctx.quadraticCurveTo(particle.x - size, particle.y, particle.x, particle.y - size * 1.5);
+    ctx.quadraticCurveTo(particle.x + size, particle.y, particle.x, particle.y + size);
     ctx.fill();
+    
+    // Add inner glow for hotter particles
+    if (particle.heat > 0.5) {
+      ctx.globalAlpha = particle.life * 0.3;
+      ctx.fillStyle = `rgb(255, 255, 180)`;
+      ctx.beginPath();
+      const innerSize = size * 0.6;
+      ctx.moveTo(particle.x, particle.y + innerSize);
+      ctx.quadraticCurveTo(particle.x - innerSize, particle.y, particle.x, particle.y - innerSize * 1.2);
+      ctx.quadraticCurveTo(particle.x + innerSize, particle.y, particle.x, particle.y + innerSize);
+      ctx.fill();
+    }
     
     ctx.restore();
   }, []);
@@ -888,7 +911,7 @@ export function LiquidationCanvas({
         return alive;
       });
 
-      // Generate and update fire particles
+      // Generate and update fire particles (replacing impact zone)
       generateFireParticles(canvas.width, canvas.height);
       state.fireParticles = state.fireParticles.filter(particle => {
         const alive = updateFireParticle(particle, deltaTime);
@@ -897,19 +920,6 @@ export function LiquidationCanvas({
         }
         return alive;
       });
-
-      // Draw fire zone background
-      const fireZoneHeight = 80;
-      const fireZoneY = canvas.height - fireZoneHeight;
-      ctx.save();
-      ctx.globalAlpha = 0.1;
-      const gradient = ctx.createLinearGradient(0, fireZoneY, 0, canvas.height);
-      gradient.addColorStop(0, 'rgba(255, 0, 0, 0)');
-      gradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.3)');
-      gradient.addColorStop(1, 'rgba(255, 0, 0, 0.5)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, fireZoneY, canvas.width, fireZoneHeight);
-      ctx.restore();
 
       // Draw controls instructions
       ctx.save();

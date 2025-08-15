@@ -38,6 +38,12 @@ export function LiquidationCanvas({
 
   const processedLiquidations = useRef(new Set<string>());
   const lastVisibleTime = useRef<number>(Date.now());
+  const chartOpacityRef = useRef<number>(chartOpacity);
+
+  // Update opacity ref when chartOpacity changes
+  useEffect(() => {
+    chartOpacityRef.current = chartOpacity;
+  }, [chartOpacity]);
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -789,7 +795,7 @@ export function LiquidationCanvas({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
       // Draw Bitcoin chart background (dimmed)
-      drawBitcoinChart(ctx, canvas.width, canvas.height, chartOpacity);
+      drawBitcoinChart(ctx, canvas.width, canvas.height, chartOpacityRef.current);
 
 
 

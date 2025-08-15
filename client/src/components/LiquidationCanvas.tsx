@@ -44,7 +44,7 @@ export function LiquidationCanvas({
       targetBag: null,
       side: 'left',
       movingRight: true,
-      speed: 0.5,
+      speed: 1.0,
       minX: 30,
       maxX: 0, // Will be set dynamically based on canvas width
       wheelRotation: 0,
@@ -611,24 +611,27 @@ export function LiquidationCanvas({
     
     // Move cannon horizontally along bottom border
     const frameMultiplier = deltaTime / 16.67;
-    const speed = state.leftCannon.speed || 0.5;
+    const speed = state.leftCannon.speed || 1.0;
     
+    let movementDirection = 0;
     if (state.leftCannon.movingRight) {
       state.leftCannon.x += speed * frameMultiplier;
+      movementDirection = 1;
       if (state.leftCannon.x >= dynamicMaxX) {
         state.leftCannon.movingRight = false;
       }
     } else {
       state.leftCannon.x -= speed * frameMultiplier;
+      movementDirection = -1;
       if (state.leftCannon.x <= (state.leftCannon.minX || 30)) {
         state.leftCannon.movingRight = true;
       }
     }
     
-    // Rotate wheels based on movement (realistic wheel rotation)
+    // Rotate wheels based on movement direction (realistic wheel rotation)
     const wheelRadius = 15;
     const distancePerFrame = speed * frameMultiplier;
-    const rotationPerFrame = distancePerFrame / wheelRadius;
+    const rotationPerFrame = (distancePerFrame / wheelRadius) * movementDirection;
     state.leftCannon.wheelRotation = (state.leftCannon.wheelRotation || 0) + rotationPerFrame;
     
     // Position cannon slightly raised from bottom

@@ -542,41 +542,69 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.restore();
   }, []);
 
-  // Static Bitcoin chart data - generated once
-  const staticBitcoinData = useMemo(() => {
-    const dataPoints = 100;
-    const basePrice = 96000; // Current BTC price around $96k
-    const volatility = 2000; // Price volatility
+  // Real Bitcoin candlestick data from Binance
+  const [bitcoinCandles, setBitcoinCandles] = useState<any[]>([]);
+  
+  // Fetch real Bitcoin data
+  useEffect(() => {
+    const fetchBitcoinData = async () => {
+      try {
+        // Get 24h hourly candlestick data from Binance (free, no API key needed)
+        const response = await fetch('https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=24');
+        const data = await response.json();
+        
+        // Convert to OHLCV format
+        const candles = data.map((kline: any[]) => ({
+          timestamp: kline[0],
+          open: parseFloat(kline[1]),
+          high: parseFloat(kline[2]),
+          low: parseFloat(kline[3]),
+          close: parseFloat(kline[4]),
+          volume: parseFloat(kline[5])
+        }));
+        
+        setBitcoinCandles(candles);
+        console.log('Загружены реальные данные Bitcoin:', candles.length, 'свечей');
+      } catch (error) {
+        console.error('Ошибка загрузки данных Bitcoin:', error);
+        // Fallback to previous static data if API fails
+        const fallbackData = [];
+        const basePrice = 96000;
+        for (let i = 0; i < 24; i++) {
+          const price = basePrice + (Math.random() - 0.5) * 2000;
+          fallbackData.push({
+            timestamp: Date.now() - (24 - i) * 60 * 60 * 1000,
+            open: price,
+            high: price + Math.random() * 500,
+            low: price - Math.random() * 500,
+            close: price + (Math.random() - 0.5) * 200,
+            volume: Math.random() * 1000
+          });
+        }
+        setBitcoinCandles(fallbackData);
+      }
+    };
     
-    // Create realistic price movement
-    const prices: number[] = [];
-    let currentPrice = basePrice;
+    fetchBitcoinData();
     
-    for (let i = 0; i < dataPoints; i++) {
-      // Add some realistic price movement
-      const change = (Math.random() - 0.5) * volatility * 0.1;
-      currentPrice += change;
-      
-      // Keep price in reasonable range
-      currentPrice = Math.max(basePrice - volatility, Math.min(basePrice + volatility, currentPrice));
-      prices.push(currentPrice);
-    }
-    
-    return prices;
+    // Update every 5 minutes
+    const interval = setInterval(fetchBitcoinData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Draw Bitcoin chart background
+  // Draw real Bitcoin candlestick chart background
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
+    if (bitcoinCandles.length === 0) return;
+    
     ctx.save();
     
     // Very dim background for the chart
-    ctx.globalAlpha = 0.08;
+    ctx.globalAlpha = 0.12;
     
-    const prices = staticBitcoinData;
-    
-    // Find min/max for scaling
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
+    // Find min/max prices from all candles
+    const allPrices = bitcoinCandles.flatMap(candle => [candle.high, candle.low]);
+    const minPrice = Math.min(...allPrices);
+    const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
     
     // Draw grid lines
@@ -584,64 +612,90 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.lineWidth = 1;
     
     // Horizontal grid lines (price levels)
-    for (let i = 0; i <= 10; i++) {
-      const y = (height * i) / 10;
+    for (let i = 0; i <= 8; i++) {
+      const y = (height * i) / 8;
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
       ctx.stroke();
     }
     
-    // Vertical grid lines (time)
-    for (let i = 0; i <= 12; i++) {
-      const x = (width * i) / 12;
+    // Vertical grid lines (time - every 4 hours)
+    for (let i = 0; i <= 6; i++) {
+      const x = (width * i) / 6;
       ctx.beginPath();
       ctx.moveTo(x, 0);
       ctx.lineTo(x, height);
       ctx.stroke();
     }
     
-    // Draw price line
-    ctx.strokeStyle = '#f7931a'; // Bitcoin orange color
-    ctx.lineWidth = 2;
-    ctx.beginPath();
+    // Draw Japanese candlesticks
+    const candleWidth = width / bitcoinCandles.length * 0.7; // 70% width for candles
+    const candleSpacing = width / bitcoinCandles.length;
     
-    for (let i = 0; i < prices.length; i++) {
-      const x = (width * i) / (prices.length - 1);
-      const normalizedPrice = (prices[i] - minPrice) / priceRange;
-      const y = height - (normalizedPrice * height * 0.8) - (height * 0.1); // Leave margins
+    bitcoinCandles.forEach((candle, index) => {
+      const x = (index + 0.5) * candleSpacing;
       
-      if (i === 0) {
-        ctx.moveTo(x, y);
+      // Scale prices to canvas
+      const openY = height - ((candle.open - minPrice) / priceRange * height * 0.85) - (height * 0.075);
+      const closeY = height - ((candle.close - minPrice) / priceRange * height * 0.85) - (height * 0.075);
+      const highY = height - ((candle.high - minPrice) / priceRange * height * 0.85) - (height * 0.075);
+      const lowY = height - ((candle.low - minPrice) / priceRange * height * 0.85) - (height * 0.075);
+      
+      // Determine candle color (green if close > open, red if close < open)
+      const isGreen = candle.close >= candle.open;
+      ctx.fillStyle = isGreen ? '#00ff7f' : '#ff4757';
+      ctx.strokeStyle = isGreen ? '#00ff7f' : '#ff4757';
+      
+      // Draw high-low line (wick)
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, highY);
+      ctx.lineTo(x, lowY);
+      ctx.stroke();
+      
+      // Draw candle body
+      const bodyTop = Math.min(openY, closeY);
+      const bodyHeight = Math.abs(closeY - openY);
+      
+      if (bodyHeight < 1) {
+        // Doji candle - just a line
+        ctx.beginPath();
+        ctx.moveTo(x - candleWidth/2, openY);
+        ctx.lineTo(x + candleWidth/2, openY);
+        ctx.stroke();
       } else {
-        ctx.lineTo(x, y);
+        // Regular candle body
+        ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
       }
-    }
-    ctx.stroke();
+    });
     
     // Draw price labels
-    ctx.fillStyle = '#666666';
-    ctx.font = '12px JetBrains Mono, monospace';
+    ctx.fillStyle = '#888888';
+    ctx.font = '11px JetBrains Mono, monospace';
     ctx.textAlign = 'right';
     
-    // Current price at the end
-    const currentY = height - ((prices[prices.length - 1] - minPrice) / priceRange * height * 0.8) - (height * 0.1);
-    ctx.fillText(`$${Math.round(prices[prices.length - 1]).toLocaleString()}`, width - 10, currentY);
-    
-    // High price
-    ctx.fillText(`$${Math.round(maxPrice).toLocaleString()}`, width - 10, height * 0.1 + 15);
-    
-    // Low price
-    ctx.fillText(`$${Math.round(minPrice).toLocaleString()}`, width - 10, height * 0.9);
+    // Current price (last candle close)
+    const lastCandle = bitcoinCandles[bitcoinCandles.length - 1];
+    if (lastCandle) {
+      const currentY = height - ((lastCandle.close - minPrice) / priceRange * height * 0.85) - (height * 0.075);
+      ctx.fillText(`$${Math.round(lastCandle.close).toLocaleString()}`, width - 5, currentY);
+      
+      // High price
+      ctx.fillText(`$${Math.round(maxPrice).toLocaleString()}`, width - 5, height * 0.075 + 12);
+      
+      // Low price  
+      ctx.fillText(`$${Math.round(minPrice).toLocaleString()}`, width - 5, height * 0.925);
+    }
     
     // Time labels
     ctx.textAlign = 'center';
-    ctx.fillText('24h', width * 0.1, height - 10);
-    ctx.fillText('12h', width * 0.5, height - 10);
-    ctx.fillText('Now', width * 0.9, height - 10);
+    ctx.fillText('24h', width * 0.1, height - 5);
+    ctx.fillText('12h', width * 0.5, height - 5);
+    ctx.fillText('Now', width * 0.9, height - 5);
     
     ctx.restore();
-  }, [staticBitcoinData]);
+  }, [bitcoinCandles]);
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {

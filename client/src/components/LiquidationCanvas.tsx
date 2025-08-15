@@ -39,11 +39,13 @@ export function LiquidationCanvas({
   const processedLiquidations = useRef(new Set<string>());
   const lastVisibleTime = useRef<number>(Date.now());
   const chartOpacityRef = useRef<number>(chartOpacity);
+  const showGridRef = useRef<boolean>(showGrid);
 
-  // Update opacity ref when chartOpacity changes
+  // Update refs when props change
   useEffect(() => {
     chartOpacityRef.current = chartOpacity;
-  }, [chartOpacity]);
+    showGridRef.current = showGrid;
+  }, [chartOpacity, showGrid]);
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 

@@ -30,8 +30,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     },
   });
 
-  const [keys, setKeys] = useState({ left: false, right: false });
   const [clickScore, setClickScore] = useState({ score: 0, count: 0 });
+  const processedLiquidations = useRef(new Set<string>());
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -52,38 +52,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     }
   }, []);
 
-  // Keyboard controls
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        setKeys(prev => ({ ...prev, left: true }));
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        setKeys(prev => ({ ...prev, right: true }));
-      }
-    };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        setKeys(prev => ({ ...prev, left: false }));
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        setKeys(prev => ({ ...prev, right: false }));
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
 
   // Mouse click handling
   useEffect(() => {
@@ -208,23 +177,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     };
   }, []);
 
-  // Create special particle for caught bags (more spectacular)
-  const createCaughtParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
-    const colors = ['#FFD700', '#FFA500', '#FFFF00', '#FF6347', '#00FF00']; // Multiple colors for celebration
-    return {
-      id: Math.random().toString(),
-      x,
-      y,
-      vx: (Math.random() - 0.5) * 16, // Even faster spread
-      vy: (Math.random() - 0.5) * 14 - 6, // Much more upward velocity
-      life: 1,
-      decay: Math.random() * 0.01 + 0.005, // Longer lasting celebration
-      color: colors[Math.floor(Math.random() * colors.length)],
-      size: Math.random() * 8 + 6, // Bigger celebration particles
-    };
-  }, []);
-
-  // Create special particle for clicked bags (different animation)
+  // Create special particle for clicked bags
   const createClickParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
     const colors = ['#FF0080', '#8000FF', '#0080FF', '#FF8000', '#80FF00']; // Bright neon colors for clicks
     return {
@@ -256,43 +209,14 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     block.y += block.velocity;
     block.rotation += block.rotationSpeed;
 
-    // Check collision with platform
-    const state = animationStateRef.current;
-    const platform = state.platform;
-    
-    if (!block.isCaught && 
-        block.x + block.width > platform.x && 
-        block.x < platform.x + platform.width &&
-        block.y + block.height > platform.y && 
-        block.y < platform.y + platform.height) {
-      // Caught by platform!
-      block.isCaught = true;
-      block.isExploding = true;
-      block.explosionTime = 0;
-      
-      // Update platform score
-      platform.score += block.amount;
-      platform.totalCaught++;
-
-      // Create special caught explosion (more particles, different colors)
-      const particleCount = Math.min(50, Math.floor(block.width / 2)); // Even more particles for caught bags
-      for (let i = 0; i < particleCount; i++) {
-        state.particles.push(createCaughtParticle(
-          block.x + block.width / 2,
-          block.y + block.height / 2,
-          block.isLong
-        ));
-      }
-      return true;
-    }
-
-    // Check if hit bottom (missed by platform)
+    // Check if hit bottom
     if (block.y + block.height >= canvas.height - 60) {
       block.isExploding = true;
       block.explosionTime = 0;
 
       // Create normal coin particles (fewer particles for missed bags)
       const particleCount = Math.min(20, Math.floor(block.width / 4));
+      const state = animationStateRef.current;
       for (let i = 0; i < particleCount; i++) {
         state.particles.push(createParticle(
           block.x + block.width / 2,
@@ -304,7 +228,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     }
 
     return block.y < canvas.height + block.height;
-  }, [createParticle, createCaughtParticle]);
+  }, [createParticle]);
 
   // Update particle
   const updateParticle = useCallback((particle: Particle): boolean => {
@@ -436,37 +360,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     ctx.restore();
   }, []);
 
-  // Draw platform
-  const drawPlatform = useCallback((ctx: CanvasRenderingContext2D, platform: Platform) => {
-    ctx.save();
-    
-    // Platform body with gradient
-    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x + platform.width, platform.y + platform.height);
-    gradient.addColorStop(0, '#4A90E2');
-    gradient.addColorStop(0.5, '#357ABD');
-    gradient.addColorStop(1, '#1E4A78');
-    
-    ctx.fillStyle = gradient;
-    ctx.shadowColor = '#4A90E2';
-    ctx.shadowBlur = 10;
-    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-    
-    // Platform border
-    ctx.strokeStyle = '#87CEEB';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
-    
-    // Platform decorative elements
-    ctx.fillStyle = '#87CEEB';
-    for (let i = 0; i < 3; i++) {
-      const dotX = platform.x + (platform.width / 4) * (i + 1);
-      ctx.beginPath();
-      ctx.arc(dotX, platform.y + platform.height / 2, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    
-    ctx.restore();
-  }, []);
+
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {
@@ -485,14 +379,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       ctx.fillStyle = 'rgba(10, 10, 10, 0.1)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Update platform position based on keys (constant speed, not affected by animationSpeed)
-      const platformSpeed = 8;
-      if (keys.left && state.platform.x > 0) {
-        state.platform.x -= platformSpeed;
-      }
-      if (keys.right && state.platform.x < canvas.width - state.platform.width) {
-        state.platform.x += platformSpeed;
-      }
+
 
       // Update and draw liquidations
       state.liquidations = state.liquidations.filter(block => {
@@ -512,19 +399,11 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
         return alive;
       });
 
-      // Draw platform
-      drawPlatform(ctx, state.platform);
-      
-      // Draw score and controls
+      // Draw click score and instructions
       ctx.save();
-      ctx.fillStyle = '#FFD700';
+      ctx.fillStyle = '#FF0080';
       ctx.font = 'bold 16px JetBrains Mono, monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(`Platform Score: $${(state.platform.score / 1000000).toFixed(1)}M`, 20, canvas.height - 100);
-      ctx.fillText(`Platform Caught: ${state.platform.totalCaught}`, 20, canvas.height - 80);
-      
-      // Draw click score
-      ctx.fillStyle = '#FF0080';
       ctx.fillText(`Click Score: $${(clickScore.score / 1000000).toFixed(1)}M`, 20, canvas.height - 60);
       ctx.fillText(`Clicked: ${clickScore.count}`, 20, canvas.height - 40);
       
@@ -532,28 +411,36 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       ctx.fillStyle = '#87CEEB';
       ctx.font = '14px JetBrains Mono, monospace';
       ctx.textAlign = 'right';
-      ctx.fillText('Use ← → keys to move platform', canvas.width - 20, canvas.height - 60);
       ctx.fillText('Click on money bags to explode them', canvas.width - 20, canvas.height - 40);
       ctx.restore();
     }
 
     requestAnimationFrame(animate);
-  }, [animationSpeed, isPaused, keys, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawPlatform, clickScore]);
+  }, [animationSpeed, isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, clickScore]);
 
-  // Add new liquidations to animation
+  // Add new liquidations to animation (without duplicates)
   useEffect(() => {
     const state = animationStateRef.current;
-    const newLiquidations = liquidations.slice(-5); // Take last 5 new liquidations
     
-    newLiquidations.forEach(liquidation => {
-      // Check if already exists
-      const exists = state.liquidations.some(block => block.id === liquidation.id);
-      if (!exists) {
-        try {
-          const block = createLiquidationBlock(liquidation);
-          state.liquidations.push(block);
-        } catch (error) {
-          console.warn('Could not create liquidation block:', error);
+    liquidations.forEach(liquidation => {
+      // Check if already processed
+      if (!processedLiquidations.current.has(liquidation.id)) {
+        // Check if already exists in current animation
+        const exists = state.liquidations.some(block => block.id === liquidation.id);
+        if (!exists) {
+          try {
+            const block = createLiquidationBlock(liquidation);
+            state.liquidations.push(block);
+            processedLiquidations.current.add(liquidation.id);
+            
+            // Keep processed set manageable (remove old entries)
+            if (processedLiquidations.current.size > 1000) {
+              const entries = Array.from(processedLiquidations.current);
+              processedLiquidations.current = new Set(entries.slice(-500));
+            }
+          } catch (error) {
+            console.warn('Could not create liquidation block:', error);
+          }
         }
       }
     });

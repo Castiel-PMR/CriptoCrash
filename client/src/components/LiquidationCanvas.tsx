@@ -601,7 +601,7 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     ctx.save();
     
     // More visible but still dim background for the chart
-    ctx.globalAlpha = 0.25;
+    ctx.globalAlpha = 0.4;
     
     // Find min/max prices from all candles
     const allPrices = bitcoinCandles.flatMap(candle => [candle.high, candle.low]);
@@ -609,12 +609,12 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     const maxPrice = Math.max(...allPrices);
     const priceRange = maxPrice - minPrice;
     
-    // Draw grid lines
-    ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 1;
+    // Draw subtle grid lines
+    ctx.strokeStyle = '#222222';
+    ctx.lineWidth = 0.5;
     
     // Horizontal grid lines (price levels)
-    for (let i = 0; i <= 8; i++) {
+    for (let i = 1; i < 8; i++) {
       const y = (height * i) / 8;
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -622,8 +622,8 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       ctx.stroke();
     }
     
-    // Vertical grid lines (time - every 4 hours)
-    for (let i = 0; i <= 6; i++) {
+    // Vertical grid lines (time)
+    for (let i = 1; i < 6; i++) {
       const x = (width * i) / 6;
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -632,25 +632,31 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
     }
     
     // Draw Japanese candlesticks
-    const candleWidth = Math.max(2, width / bitcoinCandles.length * 0.6); // At least 2px wide
+    const candleWidth = Math.max(4, width / bitcoinCandles.length * 0.8); // Wider candles
     const candleSpacing = width / bitcoinCandles.length;
     
     bitcoinCandles.forEach((candle, index) => {
       const x = (index + 0.5) * candleSpacing;
       
-      // Scale prices to canvas
-      const openY = height - ((candle.open - minPrice) / priceRange * height * 0.85) - (height * 0.075);
-      const closeY = height - ((candle.close - minPrice) / priceRange * height * 0.85) - (height * 0.075);
-      const highY = height - ((candle.high - minPrice) / priceRange * height * 0.85) - (height * 0.075);
-      const lowY = height - ((candle.low - minPrice) / priceRange * height * 0.85) - (height * 0.075);
+      // Scale prices to canvas (use more of the height)
+      const margin = height * 0.05; // 5% margin top/bottom
+      const chartHeight = height - 2 * margin;
+      
+      const openY = height - margin - ((candle.open - minPrice) / priceRange * chartHeight);
+      const closeY = height - margin - ((candle.close - minPrice) / priceRange * chartHeight);
+      const highY = height - margin - ((candle.high - minPrice) / priceRange * chartHeight);
+      const lowY = height - margin - ((candle.low - minPrice) / priceRange * chartHeight);
       
       // Determine candle color (green if close > open, red if close < open)
       const isGreen = candle.close >= candle.open;
-      ctx.fillStyle = isGreen ? '#26a69a' : '#ef5350';
-      ctx.strokeStyle = isGreen ? '#26a69a' : '#ef5350';
+      
+      // More visible colors with higher opacity
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = isGreen ? '#00c853' : '#f44336';
+      ctx.strokeStyle = isGreen ? '#00c853' : '#f44336';
       
       // Draw high-low line (wick)
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(x, highY);
       ctx.lineTo(x, lowY);
@@ -658,17 +664,20 @@ export function LiquidationCanvas({ liquidations, isPaused }: LiquidationCanvasP
       
       // Draw candle body
       const bodyTop = Math.min(openY, closeY);
-      const bodyHeight = Math.abs(closeY - openY);
+      const bodyHeight = Math.max(1, Math.abs(closeY - openY)); // At least 1px height
       
-      if (bodyHeight < 1) {
-        // Doji candle - just a line
+      if (bodyHeight < 3) {
+        // Doji candle - thicker line
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(x - candleWidth/2, openY);
         ctx.lineTo(x + candleWidth/2, openY);
         ctx.stroke();
       } else {
-        // Regular candle body
+        // Regular candle body - fill and stroke for better visibility
         ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
       }
     });
     

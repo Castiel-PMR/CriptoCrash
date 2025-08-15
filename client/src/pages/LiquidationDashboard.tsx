@@ -59,12 +59,6 @@ export default function LiquidationDashboard() {
         
         {/* Right Sidebar */}
         <div className="w-80 bg-cyber-gray/95 backdrop-blur-md border-l border-cyber-border p-4 space-y-4 overflow-y-auto">
-          {/* Market Sentiment */}
-          <MarketSentiment stats={marketStats} />
-          
-          {/* Recent Liquidations */}
-          <LiveStatsPanel recentLiquidations={filteredLiquidations} />
-          
           {/* Liquidation Filter Panel */}
           <div className="bg-cyber-dark/50 rounded-lg border border-cyber-border p-4">
             <h3 className="text-lg font-semibold mb-3 text-accent-yellow">Liquidation Filter</h3>
@@ -141,6 +135,12 @@ export default function LiquidationDashboard() {
               </div>
             </div>
           </div>
+          
+          {/* Recent Liquidations */}
+          <LiveStatsPanel recentLiquidations={filteredLiquidations} />
+          
+          {/* Market Sentiment */}
+          <MarketSentiment stats={marketStats} />
         </div>
       </div>
         

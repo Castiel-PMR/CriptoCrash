@@ -346,10 +346,10 @@ export function LiquidationCanvas({
         vy = (Math.random() - 0.5) * speed;
         break;
         
-      case 6: // Shockwave - ударная волна
+      case 6: // Shockwave - ударная волна (исправлено)
         colors = ['#FFFFFF', '#C0C0C0', '#808080'];
         speed = 22;
-        size = Math.random() * 20 + 5;
+        size = Math.random() * 12 + 3; // Уменьшил размер частиц
         decay = 0.02;
         const shockAngle = Math.random() * Math.PI * 2;
         vx = Math.cos(shockAngle) * speed;

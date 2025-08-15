@@ -5,7 +5,6 @@ import { LiquidationBlock, Particle, AnimationState } from '../types/liquidation
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
   isPaused: boolean;
-  showGrid?: boolean;
   chartOpacity?: number;
 }
 
@@ -16,7 +15,6 @@ interface ExtendedAnimationState extends AnimationState {
 export function LiquidationCanvas({ 
   liquidations, 
   isPaused, 
-  showGrid = true, 
   chartOpacity = 12 
 }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,13 +37,12 @@ export function LiquidationCanvas({
   const processedLiquidations = useRef(new Set<string>());
   const lastVisibleTime = useRef<number>(Date.now());
   const chartOpacityRef = useRef<number>(chartOpacity);
-  const showGridRef = useRef<boolean>(showGrid);
+
 
   // Update refs when props change
   useEffect(() => {
     chartOpacityRef.current = chartOpacity;
-    showGridRef.current = showGrid;
-  }, [chartOpacity, showGrid]);
+  }, [chartOpacity]);
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
@@ -658,30 +655,7 @@ export function LiquidationCanvas({
     
     ctx.save();
     
-    // Draw very subtle grid lines like TradingView (optional)
-    if (showGrid) {
-      ctx.globalAlpha = 0.05;
-      ctx.strokeStyle = '#444444';
-      ctx.lineWidth = 0.5;
-      
-      // Horizontal grid lines (price levels)
-      for (let i = 1; i < 8; i++) {
-        const y = (height * i) / 8;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-      
-      // Vertical grid lines (time) - fewer lines
-      for (let i = 1; i < 6; i++) {
-        const x = (width * i) / 6;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-    }
+    // No grid lines - clean chart background
     
     // Draw candlesticks in monochrome style - configurable opacity
     const actualOpacity = opacity !== undefined ? opacity : chartOpacity;
@@ -784,7 +758,7 @@ export function LiquidationCanvas({
     }
     
     ctx.restore();
-  }, [bitcoinCandles, showGrid]);
+  }, [bitcoinCandles]);
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {

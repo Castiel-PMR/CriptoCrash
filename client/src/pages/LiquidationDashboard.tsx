@@ -50,7 +50,6 @@ export default function LiquidationDashboard() {
           <LiquidationCanvas 
             liquidations={filteredLiquidations}
             isPaused={isPaused}
-            showGrid={showGrid}
             chartOpacity={chartOpacity}
           />
         </div>
@@ -217,18 +216,7 @@ export default function LiquidationDashboard() {
                 </label>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="showGrid"
-                  checked={showGrid}
-                  onChange={(e) => setShowGrid(e.target.checked)}
-                  className="w-4 h-4 text-accent-blue bg-cyber-border border-gray-600 rounded focus:ring-accent-blue"
-                />
-                <label htmlFor="showGrid" className="text-sm text-gray-400">
-                  Показать сетку графика
-                </label>
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-400 mb-2">

@@ -30,7 +30,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     },
   });
 
-  const [clickScore, setClickScore] = useState({ score: 0, count: 0 });
+  const clickScore = useRef({ score: 0, count: 0 });
   const processedLiquidations = useRef(new Set<string>());
 
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
@@ -78,10 +78,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
           bag.explosionTime = 0;
           
           // Update click score
-          setClickScore(prev => ({
-            score: prev.score + bag.amount,
-            count: prev.count + 1
-          }));
+          clickScore.current.score += bag.amount;
+          clickScore.current.count += 1;
           
           // Create special click explosion particles
           const particleCount = Math.min(40, Math.floor(bag.width / 2.5));
@@ -404,8 +402,8 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
       ctx.fillStyle = '#FF0080';
       ctx.font = 'bold 16px JetBrains Mono, monospace';
       ctx.textAlign = 'left';
-      ctx.fillText(`Click Score: $${(clickScore.score / 1000000).toFixed(1)}M`, 20, canvas.height - 60);
-      ctx.fillText(`Clicked: ${clickScore.count}`, 20, canvas.height - 40);
+      ctx.fillText(`Click Score: $${(clickScore.current.score / 1000000).toFixed(1)}M`, 20, canvas.height - 60);
+      ctx.fillText(`Clicked: ${clickScore.current.count}`, 20, canvas.height - 40);
       
       // Draw controls instructions
       ctx.fillStyle = '#87CEEB';
@@ -416,7 +414,7 @@ export function LiquidationCanvas({ liquidations, animationSpeed, isPaused }: Li
     }
 
     requestAnimationFrame(animate);
-  }, [animationSpeed, isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, clickScore]);
+  }, [animationSpeed, isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

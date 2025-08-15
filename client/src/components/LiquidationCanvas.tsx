@@ -540,9 +540,9 @@ export function LiquidationCanvas({
   const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
     const state = animationStateRef.current;
     
-    // Position left cannon only
-    state.leftCannon.x = 50;
-    state.leftCannon.y = canvasHeight - 60;
+    // Position left cannon only (almost at bottom)
+    state.leftCannon.x = 40;
+    state.leftCannon.y = canvasHeight - 20;
     
     // Update firing animation for left cannon only
     if (state.leftCannon.isFiring) {
@@ -775,63 +775,46 @@ export function LiquidationCanvas({
       ctx.scale(-1, 1);
     }
     
-    // Modern cyber base platform with gradient
-    const baseGradient = ctx.createLinearGradient(-30, -10, 30, 10);
-    baseGradient.addColorStop(0, '#1e3a8a'); // Deep blue
-    baseGradient.addColorStop(0.5, '#3b82f6'); // Bright blue
-    baseGradient.addColorStop(1, '#1e40af'); // Blue
+    // Compact Star Wars style base - smaller size
+    const baseGradient = ctx.createLinearGradient(-20, -6, 20, 6);
+    baseGradient.addColorStop(0, '#2d3748'); // Dark gray
+    baseGradient.addColorStop(0.5, '#4a5568'); // Medium gray
+    baseGradient.addColorStop(1, '#1a202c'); // Very dark gray
     
     ctx.fillStyle = baseGradient;
-    ctx.shadowColor = '#3b82f6';
-    ctx.shadowBlur = 8;
-    ctx.fillRect(-30, -10, 60, 20);
+    ctx.shadowColor = '#4299e1';
+    ctx.shadowBlur = 4;
+    ctx.fillRect(-20, -6, 40, 12);
     
-    // Glowing border
-    ctx.strokeStyle = '#60a5fa';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(-30, -10, 60, 20);
+    // Glowing border - smaller
+    ctx.strokeStyle = '#63b3ed';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-20, -6, 40, 12);
     ctx.shadowBlur = 0;
     
-    // Futuristic hover discs instead of wheels
-    const discGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 15);
-    discGradient.addColorStop(0, '#06b6d4'); // Cyan center
-    discGradient.addColorStop(0.7, '#0891b2'); // Darker cyan
-    discGradient.addColorStop(1, '#164e63'); // Dark edge
+    // Single central hover disc - smaller
+    const discGradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+    discGradient.addColorStop(0, '#4299e1'); // Blue center
+    discGradient.addColorStop(0.7, '#2b6cb0'); // Darker blue
+    discGradient.addColorStop(1, '#2c5282'); // Dark edge
     
-    // Left hover disc
     ctx.save();
-    ctx.translate(-20, 10);
+    ctx.translate(0, 6);
     ctx.fillStyle = discGradient;
     ctx.beginPath();
-    ctx.arc(0, 0, 15, 0, Math.PI * 2);
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
     ctx.fill();
     
-    // Inner ring effect
-    ctx.strokeStyle = '#67e8f9';
-    ctx.lineWidth = 2;
+    // Inner ring effect - smaller
+    ctx.strokeStyle = '#90cdf4';
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
     ctx.stroke();
     ctx.restore();
     
-    // Right hover disc
-    ctx.save();
-    ctx.translate(20, 10);
-    ctx.fillStyle = discGradient;
-    ctx.beginPath();
-    ctx.arc(0, 0, 15, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Inner ring effect
-    ctx.strokeStyle = '#67e8f9';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, 8, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-    
-    // Sleek cyber barrel
-    const barrelLength = 60;
+    // Compact Star Wars blaster barrel
+    const barrelLength = 35; // Shorter barrel
     let barrelAngle = cannon.isFiring ? cannon.angle : -Math.PI / 6; // Default elevation
     
     // Adjust angle for mirrored right cannon
@@ -842,28 +825,26 @@ export function LiquidationCanvas({
     ctx.save();
     ctx.rotate(barrelAngle);
     
-    const barrelGradient = ctx.createLinearGradient(0, -8, 0, 8);
-    barrelGradient.addColorStop(0, '#6366f1'); // Purple
-    barrelGradient.addColorStop(0.5, '#8b5cf6'); // Light purple
-    barrelGradient.addColorStop(1, '#5b21b6'); // Dark purple
+    const barrelGradient = ctx.createLinearGradient(0, -5, 0, 5);
+    barrelGradient.addColorStop(0, '#4a5568'); // Gray
+    barrelGradient.addColorStop(0.5, '#2d3748'); // Dark gray
+    barrelGradient.addColorStop(1, '#1a202c'); // Very dark gray
     
     ctx.fillStyle = barrelGradient;
-    ctx.fillRect(0, -8, barrelLength, 16);
+    ctx.fillRect(0, -5, barrelLength, 10); // Thinner barrel
     
-    // Glowing barrel outline
-    ctx.strokeStyle = '#a855f7';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, -8, barrelLength, 16);
-    
-    // Energy lines along barrel
-    ctx.strokeStyle = '#c084fc';
+    // Glowing barrel outline - Star Wars style
+    ctx.strokeStyle = '#63b3ed';
     ctx.lineWidth = 1;
-    for (let i = 10; i < barrelLength; i += 15) {
+    ctx.strokeRect(0, -5, barrelLength, 10);
+    
+    // Barrel segments for Star Wars detail
+    ctx.strokeStyle = '#90cdf4';
+    ctx.lineWidth = 0.5;
+    for (let i = 8; i < barrelLength; i += 8) {
       ctx.beginPath();
-      ctx.moveTo(i, -6);
-      ctx.lineTo(i + 6, -2);
-      ctx.lineTo(i + 6, 2);
-      ctx.lineTo(i, 6);
+      ctx.moveTo(i, -5);
+      ctx.lineTo(i, 5);
       ctx.stroke();
     }
     

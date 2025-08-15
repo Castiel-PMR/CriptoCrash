@@ -637,7 +637,7 @@ export function LiquidationCanvas({
   }, [timeframe]);
 
   // Draw real Bitcoin candlestick chart background  
-  const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, opacity?: number) => {
     if (bitcoinCandles.length === 0) return;
     
     // Find min/max prices from all candles
@@ -676,7 +676,8 @@ export function LiquidationCanvas({
     }
     
     // Draw candlesticks in monochrome style - configurable opacity
-    ctx.globalAlpha = chartOpacity / 100;
+    const actualOpacity = opacity !== undefined ? opacity : chartOpacity;
+    ctx.globalAlpha = actualOpacity / 100;
     
     const candleWidth = Math.max(6, width / bitcoinCandles.length * 0.7);
     const candleSpacing = width / bitcoinCandles.length;
@@ -770,7 +771,7 @@ export function LiquidationCanvas({
     }
     
     ctx.restore();
-  }, [bitcoinCandles, showGrid, chartOpacity]);
+  }, [bitcoinCandles, showGrid]);
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {
@@ -787,118 +788,8 @@ export function LiquidationCanvas({
       // Clear canvas completely to remove traces
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw Bitcoin chart background (dimmed) - using current values directly
-      if (bitcoinCandles && bitcoinCandles.length > 0) {
-        ctx.save();
-        
-        const margin = 20;
-        const chartHeight = canvas.height - margin * 2;
-        const chartWidth = canvas.width;
-        
-        // Calculate price range
-        const prices = bitcoinCandles.flatMap(candle => [candle.high, candle.low]);
-        const maxPrice = Math.max(...prices);
-        const minPrice = Math.min(...prices);
-        const priceRange = maxPrice - minPrice;
-        
-        if (priceRange === 0) {
-          ctx.restore();
-        } else {
-          // Draw grid if enabled
-          if (showGrid) {
-            ctx.globalAlpha = 0.05;
-            ctx.strokeStyle = '#444444';
-            ctx.lineWidth = 0.5;
-            
-            // Horizontal grid lines
-            for (let i = 1; i < 8; i++) {
-              const y = (canvas.height * i) / 8;
-              ctx.beginPath();
-              ctx.moveTo(0, y);
-              ctx.lineTo(canvas.width, y);
-              ctx.stroke();
-            }
-            
-            // Vertical grid lines
-            for (let i = 1; i < 6; i++) {
-              const x = (canvas.width * i) / 6;
-              ctx.beginPath();
-              ctx.moveTo(x, 0);
-              ctx.lineTo(x, canvas.height);
-              ctx.stroke();
-            }
-          }
-          
-          // Draw candlesticks with current opacity  
-          const actualOpacity = Math.max(0.1, chartOpacity / 100); // Minimum 10% для видимости
-          ctx.globalAlpha = actualOpacity;
-          
-          const candleWidth = Math.max(6, chartWidth / bitcoinCandles.length * 0.7);
-          const candleSpacing = chartWidth / bitcoinCandles.length;
-          
-          bitcoinCandles.forEach((candle, index) => {
-            const x = index * candleSpacing + candleSpacing / 2;
-            const openY = margin + ((maxPrice - candle.open) / priceRange) * chartHeight;
-            const closeY = margin + ((maxPrice - candle.close) / priceRange) * chartHeight;
-            const highY = margin + ((maxPrice - candle.high) / priceRange) * chartHeight;
-            const lowY = margin + ((maxPrice - candle.low) / priceRange) * chartHeight;
-            
-            const isGreen = candle.close >= candle.open;
-            
-            // Set colors
-            if (isGreen) {
-              ctx.strokeStyle = '#888888';
-              ctx.fillStyle = 'transparent';
-            } else {
-              ctx.fillStyle = '#333333';
-              ctx.strokeStyle = '#333333';
-            }
-            
-            ctx.lineWidth = 0.5;
-            
-            // Draw shadows (high/low lines)
-            ctx.beginPath();
-            ctx.moveTo(x, highY);
-            ctx.lineTo(x, lowY);
-            ctx.stroke();
-            
-            // Draw candle body
-            const bodyTop = Math.min(openY, closeY);
-            const bodyHeight = Math.max(2, Math.abs(closeY - openY));
-            
-            if (bodyHeight < 3) {
-              // Doji - draw cross line
-              ctx.beginPath();
-              ctx.moveTo(x - candleWidth/2, openY);
-              ctx.lineTo(x + candleWidth/2, openY);
-              ctx.stroke();
-            } else {
-              if (isGreen) {
-                // Hollow candle for bullish (green)
-                ctx.strokeRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
-              } else {
-                // Filled candle for bearish (red)
-                ctx.fillRect(x - candleWidth/2, bodyTop, candleWidth, bodyHeight);
-              }
-            }
-          });
-          
-          // Draw LIVE indicator
-          ctx.globalAlpha = 1;
-          ctx.font = 'bold 12px JetBrains Mono, monospace';
-          ctx.fillStyle = '#00ff88';
-          ctx.beginPath();
-          ctx.arc(canvas.width - 120, 15, 3, 0, Math.PI * 2);
-          ctx.fill();
-          
-          ctx.globalAlpha = 0.3;
-          ctx.fillStyle = '#666666';
-          ctx.textAlign = 'right';
-          ctx.fillText('LIVE', canvas.width - 130, 20);
-          
-          ctx.restore();
-        }
-      }
+      // Draw Bitcoin chart background (dimmed)
+      drawBitcoinChart(ctx, canvas.width, canvas.height, chartOpacity);
 
 
 
@@ -930,7 +821,7 @@ export function LiquidationCanvas({
     }
 
     requestAnimationFrame(animate);
-  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle]);
+  }, [isPaused, updateLiquidationBlock, updateParticle, drawLiquidationBlock, drawParticle, drawBitcoinChart]);
 
   // Add new liquidations to animation (without duplicates)
   useEffect(() => {

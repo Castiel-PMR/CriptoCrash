@@ -105,26 +105,41 @@ export class LiquidationService {
         const response = await fetch(
           'https://open-api.coinglass.com/public/v2/liquidation_vol_chart?interval=24h'
         );
-        const data = await response.json();
+
+        console.log("CoinGlass response status:", response.status);
+
+        let text;
+        try {
+          text = await response.text();
+        } catch (err) {
+          console.error("Failed to read CoinGlass response text:", err);
+          return;
+        }
+
+        let data: any;
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          console.error("Failed to parse CoinGlass JSON:", err);
+          console.log("Raw response text:", text);
+          return;
+        }
 
         if (data.data) {
           if (!this.firstPollLogged) {
-            console.log("CoinGlass raw data:", JSON.stringify(data.data, null, 2));
+            console.log("CoinGlass raw data sample:", JSON.stringify(data.data, null, 2));
             this.firstPollLogged = true;
           }
 
           let longs = 0;
           let shorts = 0;
 
-          // Если data.data — массив
           if (Array.isArray(data.data)) {
             for (const item of data.data) {
               longs += this.extractLongs(item);
               shorts += this.extractShorts(item);
             }
-          }
-          // Если объект
-          else if (typeof data.data === "object") {
+          } else if (typeof data.data === "object") {
             for (const key in data.data) {
               const item = data.data[key];
               if (item) {
@@ -132,9 +147,7 @@ export class LiquidationService {
                 shorts += this.extractShorts(item);
               }
             }
-          }
-          // Если простые значения
-          else {
+          } else {
             longs = (data.data.longVolUsd || 0);
             shorts = (data.data.shortVolUsd || 0);
           }
@@ -142,10 +155,14 @@ export class LiquidationService {
           this.marketStats.totalLongs = longs;
           this.marketStats.totalShorts = shorts;
 
+          console.log(`✅ Updated CoinGlass totals: longs=${longs}, shorts=${shorts}`);
+
           this.broadcast({
             type: "marketStats",
             data: this.marketStats,
           });
+        } else {
+          console.warn("CoinGlass returned no 'data' field:", data);
         }
       } catch (error) {
         console.error('Error fetching CoinGlass daily data:', error);
@@ -156,7 +173,6 @@ export class LiquidationService {
     pollCoinGlass();
   }
 
-  // Универсальный парсер: если есть поля longVolUsd/shortVolUsd
   private extractLongs(item: any): number {
     if (!item) return 0;
     if (typeof item === "object") {
@@ -178,7 +194,6 @@ export class LiquidationService {
       this.recentLiquidations.shift();
     }
 
-    // ✅ считаем только ratio
     if (liquidation.side === 'long') {
       this.marketStats.longShortRatio.longs++;
     } else {
@@ -193,12 +208,10 @@ export class LiquidationService {
     });
   }
 
-  // ✅ убран пересчёт totalLongs/totalShorts
   private startStatsUpdates() {
     setInterval(() => {
       const now = Date.now();
 
-      // обновляем историю ratio (не 24h объёмы)
       this.marketStats.volumeHistory.push({
         timestamp: now,
         longs: this.marketStats.longShortRatio.longs,
@@ -209,7 +222,6 @@ export class LiquidationService {
         this.marketStats.volumeHistory.shift();
       }
 
-      // Reset activeLiquidations постепенно
       this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
 
       this.broadcast({

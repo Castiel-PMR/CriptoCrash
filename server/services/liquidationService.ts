@@ -124,48 +124,39 @@ export class LiquidationService {
   }
 
       private startStatsUpdates() {
-      setInterval(() => {
-        const now = Date.now();
+  setInterval(() => {
+    const now = Date.now();
 
-        // оставляем только ликвидации за 24 часа
-        this.recentLiquidations = this.recentLiquidations.filter(
-          l => now - l.timestamp < 24 * 60 * 60 * 1000
-        );
+    const recentLongs = this.recentLiquidations
+      .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
+      .reduce((sum, l) => sum + l.value, 0);
 
-        // 🔹 ликвидации только за последний час
-        const lastHour = this.recentLiquidations.filter(
-          l => now - l.timestamp < 60 * 60 * 1000
-        );
+    const recentShorts = this.recentLiquidations
+      .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
+      .reduce((sum, l) => sum + l.value, 0);
 
-        const recentLongs = lastHour
-          .filter(l => l.side === 'long')
-          .reduce((sum, l) => sum + l.value, 0);
+    // каждая запись = 1 минута
+    this.marketStats.volumeHistory.push({
+      timestamp: now,
+      longs: recentLongs,
+      shorts: recentShorts,
+    });
 
-        const recentShorts = lastHour
-          .filter(l => l.side === 'short')
-          .reduce((sum, l) => sum + l.value, 0);
-
-        // 👉 активные считаем строго по lastHour (без сбросов!)
-        this.marketStats.activeLiquidations = lastHour.length;
-
-        // обновляем историю объёмов (раз в минуту)
-        this.marketStats.volumeHistory.push({
-          timestamp: now,
-          longs: recentLongs,
-          shorts: recentShorts,
-        });
-
-        if (this.marketStats.volumeHistory.length > 1440) {
-          this.marketStats.volumeHistory.shift();
-        }
-
-        // всегда рассылаем
-        this.broadcast({
-          type: 'marketStats',
-          data: this.marketStats
-        });
-      }, 60 * 1000); // раз в минуту
+    // храним 24ч (1440 минут)
+    if (this.marketStats.volumeHistory.length > 1440) {
+      this.marketStats.volumeHistory.shift();
     }
+
+    // 🔥 вернул старую «живую» механику
+    this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+
+    this.broadcast({
+      type: 'marketStats',
+      data: this.marketStats
+    });
+  }, 60000); // раз в минуту
+}
+
 
 
   private broadcast(message: any) {

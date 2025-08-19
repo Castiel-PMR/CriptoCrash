@@ -16,8 +16,8 @@ export class LiquidationService {
   constructor(private wss: WebSocketServer) {
     this.setupWebSocketServer();
     this.connectToBinance();
-    this.startCoinGlassPolling();
-    this.startStatsUpdates();
+    this.startCoinGlassPolling(); // ✅ берем статистику только отсюда
+    this.startStatsUpdates();     // ✅ только обновление ratio + active
   }
 
   private setupWebSocketServer() {
@@ -25,13 +25,11 @@ export class LiquidationService {
       console.log('Client connected to liquidation feed');
       this.clients.add(ws);
 
-      // Send current stats immediately
       ws.send(JSON.stringify({
         type: 'marketStats',
         data: this.marketStats
       }));
 
-      // Send recent liquidations
       ws.send(JSON.stringify({
         type: 'recentLiquidations',
         data: this.recentLiquidations.slice(-10)
@@ -99,18 +97,19 @@ export class LiquidationService {
     };
   }
 
+  // ✅ только CoinGlass обновляет totalLongs/totalShorts
   private async startCoinGlassPolling() {
     const pollCoinGlass = async () => {
       try {
-        // 🔹 24h summary
-        const response = await fetch('https://open-api.coinglass.com/public/v2/liquidation_vol_chart?interval=24h');
+        const response = await fetch(
+          'https://open-api.coinglass.com/public/v2/liquidation_vol_chart?interval=24h'
+        );
         const data = await response.json();
 
         if (data.data) {
           const longs = data.data.longVolUsd || 0;
           const shorts = data.data.shortVolUsd || 0;
 
-          // Обновляем суточные данные
           this.marketStats.totalLongs = longs;
           this.marketStats.totalShorts = shorts;
 
@@ -124,20 +123,17 @@ export class LiquidationService {
       }
     };
 
-    // Каждые 5 минут
-    setInterval(pollCoinGlass, 300000);
-    pollCoinGlass(); // Initial call
+    setInterval(pollCoinGlass, 300000); // каждые 5 мин
+    pollCoinGlass();
   }
 
   private processLiquidation(liquidation: Liquidation) {
-    // Add to recent liquidations
     this.recentLiquidations.push(liquidation);
     if (this.recentLiquidations.length > 100) {
       this.recentLiquidations.shift();
     }
 
-    // Не трогаем totalLongs/totalShorts (они = CoinGlass 24h)
-    // Но считаем соотношение сделок
+    // ✅ считаем только ratio
     if (liquidation.side === 'long') {
       this.marketStats.longShortRatio.longs++;
     } else {
@@ -146,51 +142,37 @@ export class LiquidationService {
 
     this.marketStats.activeLiquidations++;
 
-    // Broadcast to all clients
     this.broadcast({
       type: 'liquidation',
       data: liquidation
     });
   }
 
+  // ✅ убрал пересчет totalLongs/totalShorts
   private startStatsUpdates() {
-  setInterval(() => {
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
+    setInterval(() => {
+      const now = Date.now();
 
-    // Сумма ликвидаций за последние сутки
-    const dailyLongs = this.recentLiquidations
-      .filter(l => l.side === 'long' && now - l.timestamp < dayMs)
-      .reduce((sum, l) => sum + l.value, 0);
+      // обновляем историю ratio (не 24h объёмы)
+      this.marketStats.volumeHistory.push({
+        timestamp: now,
+        longs: this.marketStats.longShortRatio.longs,
+        shorts: this.marketStats.longShortRatio.shorts,
+      });
 
-    const dailyShorts = this.recentLiquidations
-      .filter(l => l.side === 'short' && now - l.timestamp < dayMs)
-      .reduce((sum, l) => sum + l.value, 0);
+      if (this.marketStats.volumeHistory.length > 24) {
+        this.marketStats.volumeHistory.shift();
+      }
 
-    this.marketStats.totalLongs = dailyLongs;
-    this.marketStats.totalShorts = dailyShorts;
+      // Reset activeLiquidations постепенно
+      this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
 
-    // Обновляем историю (для графика)
-    this.marketStats.volumeHistory.push({
-      timestamp: now,
-      longs: dailyLongs,
-      shorts: dailyShorts,
-    });
-
-    if (this.marketStats.volumeHistory.length > 24) {
-      this.marketStats.volumeHistory.shift();
-    }
-
-    // Reset activeLiquidations
-    this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
-
-    this.broadcast({
-      type: 'marketStats',
-      data: this.marketStats
-    });
-  }, 5000);
-}
-
+      this.broadcast({
+        type: 'marketStats',
+        data: this.marketStats
+      });
+    }, 5000);
+  }
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

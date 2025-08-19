@@ -1079,15 +1079,16 @@ export function LiquidationCanvas({
 
   
   // Timeframe mapping for data fetching  
-  const timeframeLimits: Record<string, number> = {
-    '1m': 60,
-    '5m': 60, 
-    '15m': 48,
-    '30m': 48,
-    '1h': 24,
-    '4h': 24,
-    '1d': 30
-  };
+    const timeframeLimits: Record<string, number> = {
+      '1m': 60,
+      '5m': 60, 
+      '15m': 60,
+      '30m': 60,
+      '1h': 60,
+      '4h': 60,
+      '1d': 60
+    };
+
   
   // Fetch real Bitcoin data
   useEffect(() => {

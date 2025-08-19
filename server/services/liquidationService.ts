@@ -102,48 +102,30 @@ export class LiquidationService {
   private async startCoinGlassPolling() {
     const pollCoinGlass = async () => {
       try {
-        const response = await fetch('https://open-api.coinglass.com/public/v2/liquidation_history?interval=1m&limit=50');
+        // 🔹 24h summary
+        const response = await fetch('https://open-api.coinglass.com/public/v2/liquidation_vol_chart?interval=24h');
         const data = await response.json();
-        
-        if (data.data && Array.isArray(data.data)) {
-          data.data.forEach((item: any) => {
-            // Process both long and short liquidations
-            if (item.longLiquidationUsd > 500) {
-              const liquidation: Liquidation = {
-                id: `coinglass-long-${item.createTime}-${item.symbol}`,
-                timestamp: item.createTime,
-                symbol: item.symbol,
-                exchange: 'coinglass',
-                side: 'long',
-                size: item.longLiquidationUsd / item.price,
-                price: item.price,
-                value: item.longLiquidationUsd,
-              };
-              this.processLiquidation(liquidation);
-            }
 
-            if (item.shortLiquidationUsd > 500) {
-              const liquidation: Liquidation = {
-                id: `coinglass-short-${item.createTime}-${item.symbol}`,
-                timestamp: item.createTime,
-                symbol: item.symbol,
-                exchange: 'coinglass',
-                side: 'short',
-                size: item.shortLiquidationUsd / item.price,
-                price: item.price,
-                value: item.shortLiquidationUsd,
-              };
-              this.processLiquidation(liquidation);
-            }
+        if (data.data) {
+          const longs = data.data.longVolUsd || 0;
+          const shorts = data.data.shortVolUsd || 0;
+
+          // Обновляем суточные данные
+          this.marketStats.totalLongs = longs;
+          this.marketStats.totalShorts = shorts;
+
+          this.broadcast({
+            type: "marketStats",
+            data: this.marketStats,
           });
         }
       } catch (error) {
-        console.error('Error fetching CoinGlass data:', error);
+        console.error('Error fetching CoinGlass daily data:', error);
       }
     };
 
-    // Poll every 30 seconds
-    setInterval(pollCoinGlass, 30000);
+    // Каждые 5 минут
+    setInterval(pollCoinGlass, 300000);
     pollCoinGlass(); // Initial call
   }
 
@@ -154,12 +136,11 @@ export class LiquidationService {
       this.recentLiquidations.shift();
     }
 
-    // Update stats
+    // Не трогаем totalLongs/totalShorts (они = CoinGlass 24h)
+    // Но считаем соотношение сделок
     if (liquidation.side === 'long') {
-      this.marketStats.totalLongs += liquidation.value;
       this.marketStats.longShortRatio.longs++;
     } else {
-      this.marketStats.totalShorts += liquidation.value;
       this.marketStats.longShortRatio.shorts++;
     }
 
@@ -174,7 +155,6 @@ export class LiquidationService {
 
   private startStatsUpdates() {
     setInterval(() => {
-      // Update volume history
       const now = Date.now();
       const recentLongs = this.recentLiquidations
         .filter(l => l.side === 'long' && now - l.timestamp < 3600000)

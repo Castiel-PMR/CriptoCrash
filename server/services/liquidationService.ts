@@ -8,8 +8,10 @@ export class LiquidationService {
     totalLongs: 0,
     totalShorts: 0,
     activeLiquidations: 0,
-    longShortRatio: { longs: 0, shorts: 0 }
+    longShortRatio: { longs: 0, shorts: 0 },
+    volumeHistory: []   // ✅ оставляем, чтобы фронт не падал
   };
+
   private recentLiquidations: Liquidation[] = [];
 
   constructor(private wss: WebSocketServer) {

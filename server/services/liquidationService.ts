@@ -123,7 +123,7 @@ export class LiquidationService {
     });
   }
 
-  private startStatsUpdates() {
+    private startStatsUpdates() {
     setInterval(() => {
       const now = Date.now();
 
@@ -135,7 +135,10 @@ export class LiquidationService {
         .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
         .reduce((sum, l) => sum + l.value, 0);
 
-      // каждая запись = 1 минута
+      // 🔹 считаем количество ликвидаций за последний час
+      const activeCount = this.recentLiquidations
+        .filter(l => now - l.timestamp < 3600000).length;
+
       this.marketStats.volumeHistory.push({
         timestamp: now,
         longs: recentLongs,
@@ -147,14 +150,14 @@ export class LiquidationService {
         this.marketStats.volumeHistory.shift();
       }
 
-      // сброс активных
-      this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+      // 🔹 вместо искусственного сброса записываем реальное количество
+      this.marketStats.activeLiquidations = activeCount;
 
       this.broadcast({
         type: 'marketStats',
         data: this.marketStats
       });
-    }, 60000); // обновление раз в минуту
+    }, 60000); // раз в минуту
   }
 
   private broadcast(message: any) {

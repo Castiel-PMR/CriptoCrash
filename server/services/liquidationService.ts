@@ -108,7 +108,7 @@ export class LiquidationService {
         if (data.data && Array.isArray(data.data)) {
           data.data.forEach((item: any) => {
             // Process both long and short liquidations
-            if (item.longLiquidationUsd > 1000) {
+            if (item.longLiquidationUsd > 500) {
               const liquidation: Liquidation = {
                 id: `coinglass-long-${item.createTime}-${item.symbol}`,
                 timestamp: item.createTime,
@@ -122,7 +122,7 @@ export class LiquidationService {
               this.processLiquidation(liquidation);
             }
 
-            if (item.shortLiquidationUsd > 1000) {
+            if (item.shortLiquidationUsd > 500) {
               const liquidation: Liquidation = {
                 id: `coinglass-short-${item.createTime}-${item.symbol}`,
                 timestamp: item.createTime,

@@ -154,36 +154,43 @@ export class LiquidationService {
   }
 
   private startStatsUpdates() {
-    setInterval(() => {
-      const now = Date.now();
-      const recentLongs = this.recentLiquidations
-        .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
-        .reduce((sum, l) => sum + l.value, 0);
-      
-      const recentShorts = this.recentLiquidations
-        .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
-        .reduce((sum, l) => sum + l.value, 0);
+  setInterval(() => {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
 
-      this.marketStats.volumeHistory.push({
-        timestamp: now,
-        longs: recentLongs,
-        shorts: recentShorts,
-      });
+    // Сумма ликвидаций за последние сутки
+    const dailyLongs = this.recentLiquidations
+      .filter(l => l.side === 'long' && now - l.timestamp < dayMs)
+      .reduce((sum, l) => sum + l.value, 0);
 
-      if (this.marketStats.volumeHistory.length > 24) {
-        this.marketStats.volumeHistory.shift();
-      }
+    const dailyShorts = this.recentLiquidations
+      .filter(l => l.side === 'short' && now - l.timestamp < dayMs)
+      .reduce((sum, l) => sum + l.value, 0);
 
-      // Reset active count periodically
-      this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+    this.marketStats.totalLongs = dailyLongs;
+    this.marketStats.totalShorts = dailyShorts;
 
-      // Broadcast updated stats
-      this.broadcast({
-        type: 'marketStats',
-        data: this.marketStats
-      });
-    }, 5000);
-  }
+    // Обновляем историю (для графика)
+    this.marketStats.volumeHistory.push({
+      timestamp: now,
+      longs: dailyLongs,
+      shorts: dailyShorts,
+    });
+
+    if (this.marketStats.volumeHistory.length > 24) {
+      this.marketStats.volumeHistory.shift();
+    }
+
+    // Reset activeLiquidations
+    this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+
+    this.broadcast({
+      type: 'marketStats',
+      data: this.marketStats
+    });
+  }, 5000);
+}
+
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

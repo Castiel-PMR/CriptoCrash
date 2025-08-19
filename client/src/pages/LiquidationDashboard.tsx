@@ -161,14 +161,6 @@ export default function LiquidationDashboard() {
       <div className="fixed bottom-6 right-6 z-50">
         <div className="flex flex-col space-y-3">
           <button 
-            onClick={handleTogglePause}
-            className="bg-accent-blue hover:bg-blue-600 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
-            title={isPaused ? 'Resume' : 'Pause'}
-          >
-            {isPaused ? <Play className="w-6 h-6" /> : <Pause className="w-6 h-6" />}
-          </button>
-          
-          <button 
             onClick={handleToggleSettings}
             className="bg-cyber-gray hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
             title="Settings"

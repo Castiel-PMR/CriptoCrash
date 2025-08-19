@@ -113,6 +113,7 @@ export class LiquidationService {
           }
         );
 
+
         console.log("CoinGlass response status:", response.status);
 
         if (!response.ok) {

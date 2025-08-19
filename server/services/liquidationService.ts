@@ -124,47 +124,49 @@ export class LiquidationService {
   }
 
       private startStatsUpdates() {
-    setInterval(() => {
-      const now = Date.now();
+      setInterval(() => {
+        const now = Date.now();
 
-      // оставляем только ликвидации за последние 24ч
-      this.recentLiquidations = this.recentLiquidations.filter(
-        l => now - l.timestamp < 86400000
-      );
+        // оставляем только ликвидации за 24 часа
+        this.recentLiquidations = this.recentLiquidations.filter(
+          l => now - l.timestamp < 24 * 60 * 60 * 1000
+        );
 
-      // считаем ликвидации за последний час
-      const lastHour = this.recentLiquidations.filter(
-        l => now - l.timestamp < 3600000
-      );
+        // 🔹 ликвидации только за последний час
+        const lastHour = this.recentLiquidations.filter(
+          l => now - l.timestamp < 60 * 60 * 1000
+        );
 
-      const recentLongs = lastHour
-        .filter(l => l.side === 'long')
-        .reduce((sum, l) => sum + l.value, 0);
+        const recentLongs = lastHour
+          .filter(l => l.side === 'long')
+          .reduce((sum, l) => sum + l.value, 0);
 
-      const recentShorts = lastHour
-        .filter(l => l.side === 'short')
-        .reduce((sum, l) => sum + l.value, 0);
+        const recentShorts = lastHour
+          .filter(l => l.side === 'short')
+          .reduce((sum, l) => sum + l.value, 0);
 
-      // 🔹 количество активных ликвидаций за час
-      this.marketStats.activeLiquidations = lastHour.length;
+        // 👉 активные считаем строго по lastHour (без сбросов!)
+        this.marketStats.activeLiquidations = lastHour.length;
 
-      this.marketStats.volumeHistory.push({
-        timestamp: now,
-        longs: recentLongs,
-        shorts: recentShorts,
-      });
+        // обновляем историю объёмов (раз в минуту)
+        this.marketStats.volumeHistory.push({
+          timestamp: now,
+          longs: recentLongs,
+          shorts: recentShorts,
+        });
 
-      // храним только 24ч (1440 точек по 1м)
-      if (this.marketStats.volumeHistory.length > 1440) {
-        this.marketStats.volumeHistory.shift();
-      }
+        if (this.marketStats.volumeHistory.length > 1440) {
+          this.marketStats.volumeHistory.shift();
+        }
 
-      this.broadcast({
-        type: 'marketStats',
-        data: this.marketStats
-      });
-    }, 60000); // раз в минуту
-  }
+        // всегда рассылаем
+        this.broadcast({
+          type: 'marketStats',
+          data: this.marketStats
+        });
+      }, 60 * 1000); // раз в минуту
+    }
+
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

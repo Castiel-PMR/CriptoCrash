@@ -16,7 +16,6 @@ export class LiquidationService {
   constructor(private wss: WebSocketServer) {
     this.setupWebSocketServer();
     this.connectToBinance();
-    this.startCoinGlassPolling();
     this.startStatsUpdates();
   }
 
@@ -99,55 +98,6 @@ export class LiquidationService {
     };
   }
 
-  private async startCoinGlassPolling() {
-    const pollCoinGlass = async () => {
-      try {
-        console.log("[CoinGlass] Polling liquidation history...");
-        const response = await fetch('https://open-api.coinglass.com/public/v2/liquidation_history?interval=1m&limit=50');
-        const data = await response.json();
-        
-        if (data.data && Array.isArray(data.data)) {
-          data.data.forEach((item: any) => {
-            // Process both long and short liquidations
-            if (item.longLiquidationUsd > 500) {
-              const liquidation: Liquidation = {
-                id: `coinglass-long-${item.createTime}-${item.symbol}`,
-                timestamp: item.createTime,
-                symbol: item.symbol,
-                exchange: 'coinglass',
-                side: 'long',
-                size: item.longLiquidationUsd / item.price,
-                price: item.price,
-                value: item.longLiquidationUsd,
-              };
-              this.processLiquidation(liquidation);
-            }
-
-            if (item.shortLiquidationUsd > 500) {
-              const liquidation: Liquidation = {
-                id: `coinglass-short-${item.createTime}-${item.symbol}`,
-                timestamp: item.createTime,
-                symbol: item.symbol,
-                exchange: 'coinglass',
-                side: 'short',
-                size: item.shortLiquidationUsd / item.price,
-                price: item.price,
-                value: item.shortLiquidationUsd,
-              };
-              this.processLiquidation(liquidation);
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching CoinGlass data:', error);
-      }
-    };
-
-    // Poll every 30 seconds
-    setInterval(pollCoinGlass, 30000);
-    pollCoinGlass(); // Initial call
-  }
-
   private processLiquidation(liquidation: Liquidation) {
     // Add to recent liquidations
     this.recentLiquidations.push(liquidation);
@@ -174,39 +124,38 @@ export class LiquidationService {
   }
 
   private startStatsUpdates() {
-  setInterval(() => {
-    const now = Date.now();
+    setInterval(() => {
+      const now = Date.now();
 
-    const recentLongs = this.recentLiquidations
-      .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
-      .reduce((sum, l) => sum + l.value, 0);
+      const recentLongs = this.recentLiquidations
+        .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
+        .reduce((sum, l) => sum + l.value, 0);
 
-    const recentShorts = this.recentLiquidations
-      .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
-      .reduce((sum, l) => sum + l.value, 0);
+      const recentShorts = this.recentLiquidations
+        .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
+        .reduce((sum, l) => sum + l.value, 0);
 
-    // каждая запись = 1 минута
-    this.marketStats.volumeHistory.push({
-      timestamp: now,
-      longs: recentLongs,
-      shorts: recentShorts,
-    });
+      // каждая запись = 1 минута
+      this.marketStats.volumeHistory.push({
+        timestamp: now,
+        longs: recentLongs,
+        shorts: recentShorts,
+      });
 
-    // храним 24ч (1440 минут)
-    if (this.marketStats.volumeHistory.length > 1440) {
-      this.marketStats.volumeHistory.shift();
-    }
+      // храним 24ч (1440 минут)
+      if (this.marketStats.volumeHistory.length > 1440) {
+        this.marketStats.volumeHistory.shift();
+      }
 
-    // сброс активных
-    this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+      // сброс активных
+      this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
 
-    this.broadcast({
-      type: 'marketStats',
-      data: this.marketStats
-    });
-  }, 60000); // было 5000, теперь раз в минуту
-}
-
+      this.broadcast({
+        type: 'marketStats',
+        data: this.marketStats
+      });
+    }, 60000); // обновление раз в минуту
+  }
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

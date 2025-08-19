@@ -12,11 +12,12 @@ export class LiquidationService {
     volumeHistory: [],
   };
   private recentLiquidations: Liquidation[] = [];
+  private firstPollLogged = false;
 
   constructor(private wss: WebSocketServer) {
     this.setupWebSocketServer();
     this.connectToBinance();
-    this.startCoinGlassPolling(); // ✅ берем статистику только отсюда
+    this.startCoinGlassPolling(); // ✅ берём статистику только отсюда
     this.startStatsUpdates();     // ✅ только обновление ratio + active
   }
 
@@ -97,7 +98,7 @@ export class LiquidationService {
     };
   }
 
-  // ✅ только CoinGlass обновляет totalLongs/totalShorts
+  // ✅ CoinGlass обновляет только totalLongs/totalShorts
   private async startCoinGlassPolling() {
     const pollCoinGlass = async () => {
       try {
@@ -107,8 +108,36 @@ export class LiquidationService {
         const data = await response.json();
 
         if (data.data) {
-          const longs = data.data.longVolUsd || 0;
-          const shorts = data.data.shortVolUsd || 0;
+          if (!this.firstPollLogged) {
+            console.log("CoinGlass raw data:", JSON.stringify(data.data, null, 2));
+            this.firstPollLogged = true;
+          }
+
+          let longs = 0;
+          let shorts = 0;
+
+          // Если data.data — массив
+          if (Array.isArray(data.data)) {
+            for (const item of data.data) {
+              longs += this.extractLongs(item);
+              shorts += this.extractShorts(item);
+            }
+          }
+          // Если объект
+          else if (typeof data.data === "object") {
+            for (const key in data.data) {
+              const item = data.data[key];
+              if (item) {
+                longs += this.extractLongs(item);
+                shorts += this.extractShorts(item);
+              }
+            }
+          }
+          // Если простые значения
+          else {
+            longs = (data.data.longVolUsd || 0);
+            shorts = (data.data.shortVolUsd || 0);
+          }
 
           this.marketStats.totalLongs = longs;
           this.marketStats.totalShorts = shorts;
@@ -125,6 +154,22 @@ export class LiquidationService {
 
     setInterval(pollCoinGlass, 300000); // каждые 5 мин
     pollCoinGlass();
+  }
+
+  // Универсальный парсер: если есть поля longVolUsd/shortVolUsd
+  private extractLongs(item: any): number {
+    if (!item) return 0;
+    if (typeof item === "object") {
+      return item.longVolUsd || 0;
+    }
+    return 0;
+  }
+  private extractShorts(item: any): number {
+    if (!item) return 0;
+    if (typeof item === "object") {
+      return item.shortVolUsd || 0;
+    }
+    return 0;
   }
 
   private processLiquidation(liquidation: Liquidation) {
@@ -148,7 +193,7 @@ export class LiquidationService {
     });
   }
 
-  // ✅ убрал пересчет totalLongs/totalShorts
+  // ✅ убран пересчёт totalLongs/totalShorts
   private startStatsUpdates() {
     setInterval(() => {
       const now = Date.now();

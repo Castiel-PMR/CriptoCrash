@@ -174,37 +174,39 @@ export class LiquidationService {
   }
 
   private startStatsUpdates() {
-    setInterval(() => {
-      // Update volume history
-      const now = Date.now();
-      const recentLongs = this.recentLiquidations
-        .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
-        .reduce((sum, l) => sum + l.value, 0);
-      
-      const recentShorts = this.recentLiquidations
-        .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
-        .reduce((sum, l) => sum + l.value, 0);
+  setInterval(() => {
+    const now = Date.now();
 
-      this.marketStats.volumeHistory.push({
-        timestamp: now,
-        longs: recentLongs,
-        shorts: recentShorts,
-      });
+    const recentLongs = this.recentLiquidations
+      .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
+      .reduce((sum, l) => sum + l.value, 0);
 
-      if (this.marketStats.volumeHistory.length > 24) {
-        this.marketStats.volumeHistory.shift();
-      }
+    const recentShorts = this.recentLiquidations
+      .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
+      .reduce((sum, l) => sum + l.value, 0);
 
-      // Reset active count periodically
-      this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+    // каждая запись = 1 минута
+    this.marketStats.volumeHistory.push({
+      timestamp: now,
+      longs: recentLongs,
+      shorts: recentShorts,
+    });
 
-      // Broadcast updated stats
-      this.broadcast({
-        type: 'marketStats',
-        data: this.marketStats
-      });
-    }, 5000);
-  }
+    // храним 24ч (1440 минут)
+    if (this.marketStats.volumeHistory.length > 1440) {
+      this.marketStats.volumeHistory.shift();
+    }
+
+    // сброс активных
+    this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
+
+    this.broadcast({
+      type: 'marketStats',
+      data: this.marketStats
+    });
+  }, 60000); // было 5000, теперь раз в минуту
+}
+
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

@@ -29,19 +29,19 @@ export function StatsHeader({ stats, isConnected, timeframe, onTimeframeChange }
             </h1>
             <div className="flex items-center space-x-4 lg:space-x-6 overflow-x-auto w-full lg:w-auto">
               <div className="text-center flex-shrink-0">
-                <div className="text-xs lg:text-sm text-gray-400">Лонги</div>
+                <div className="text-xs lg:text-sm text-gray-400">Longs</div>
                 <div className="text-lg lg:text-xl font-mono font-bold text-long-red stats-glow">
                   {formatCurrency(stats.totalLongs)}
                 </div>
               </div>
               <div className="text-center flex-shrink-0">
-                <div className="text-xs lg:text-sm text-gray-400">Шорты</div>
+                <div className="text-xs lg:text-sm text-gray-400">Shorts</div>
                 <div className="text-lg lg:text-xl font-mono font-bold text-short-green stats-glow">
                   {formatCurrency(stats.totalShorts)}
                 </div>
               </div>
               <div className="text-center flex-shrink-0">
-                <div className="text-xs lg:text-sm text-gray-400">Активных</div>
+                <div className="text-xs lg:text-sm text-gray-400">Active</div>
                 <div className="text-lg lg:text-xl font-mono font-bold text-accent-blue stats-glow">
                   {stats.activeLiquidations}
                 </div>
@@ -50,15 +50,15 @@ export function StatsHeader({ stats, isConnected, timeframe, onTimeframeChange }
               {/* Timeframe Selector */}
               {timeframe && onTimeframeChange && (
                 <div className="flex items-center gap-1 lg:ml-6">
-                  <span className="text-xs text-gray-400 font-mono mr-1 lg:mr-2">График:</span>
+                  <span className="text-xs text-gray-400 font-mono mr-1 lg:mr-2">Chart:</span>
                   {[
-                    { label: '1м', value: '1m' },
-                    { label: '5м', value: '5m' },
-                    { label: '15м', value: '15m' },
-                    { label: '30м', value: '30m' },
-                    { label: '1ч', value: '1h' },
-                    { label: '4ч', value: '4h' },
-                    { label: '1д', value: '1d' }
+                    { label: '1m', value: '1m' },
+                    { label: '5m', value: '5m' },
+                    { label: '15m', value: '15m' },
+                    { label: '30m', value: '30m' },
+                    { label: '1h', value: '1h' },
+                    { label: '4h', value: '4h' },
+                    { label: '1d', value: '1d' }
                   ].map((tf) => (
                     <button
                       key={tf.value}
@@ -88,7 +88,7 @@ export function StatsHeader({ stats, isConnected, timeframe, onTimeframeChange }
                 }`}
               />
               <span className="text-xs lg:text-sm text-gray-400">
-                {isConnected ? 'Подключено' : 'Отключено'}
+                {isConnected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
           </div>

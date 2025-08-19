@@ -8,8 +8,7 @@ export class LiquidationService {
     totalLongs: 0,
     totalShorts: 0,
     activeLiquidations: 0,
-    longShortRatio: { longs: 0, shorts: 0 },
-    volumeHistory: [],
+    longShortRatio: { longs: 0, shorts: 0 }
   };
   private recentLiquidations: Liquidation[] = [];
 
@@ -24,13 +23,13 @@ export class LiquidationService {
       console.log('Client connected to liquidation feed');
       this.clients.add(ws);
 
-      // Send current stats immediately
+      // Отправляем текущие статистики сразу
       ws.send(JSON.stringify({
         type: 'marketStats',
         data: this.marketStats
       }));
 
-      // Send recent liquidations
+      // Отправляем последние ликвидации
       ws.send(JSON.stringify({
         type: 'recentLiquidations',
         data: this.recentLiquidations.slice(-10)
@@ -99,13 +98,13 @@ export class LiquidationService {
   }
 
   private processLiquidation(liquidation: Liquidation) {
-    // Add to recent liquidations
+    // Добавляем в список последних ликвидаций
     this.recentLiquidations.push(liquidation);
     if (this.recentLiquidations.length > 100) {
       this.recentLiquidations.shift();
     }
 
-    // Update stats
+    // Обновляем статистику
     if (liquidation.side === 'long') {
       this.marketStats.totalLongs += liquidation.value;
       this.marketStats.longShortRatio.longs++;
@@ -116,46 +115,24 @@ export class LiquidationService {
 
     this.marketStats.activeLiquidations++;
 
-    // Broadcast to all clients
+    // Отправляем клиентам новую ликвидацию
     this.broadcast({
       type: 'liquidation',
       data: liquidation
     });
   }
 
-      private startStatsUpdates() {
-  setInterval(() => {
-    const now = Date.now();
+  private startStatsUpdates() {
+    setInterval(() => {
+      // 🔥 оставляем только "живую" механику активных ликвидаций
+      this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
 
-    const recentLongs = this.recentLiquidations
-      .filter(l => l.side === 'long' && now - l.timestamp < 3600000)
-      .reduce((sum, l) => sum + l.value, 0);
-
-    const recentShorts = this.recentLiquidations
-      .filter(l => l.side === 'short' && now - l.timestamp < 3600000)
-      .reduce((sum, l) => sum + l.value, 0);
-
-    // каждая запись = 1 минута
-    this.marketStats.volumeHistory.push({
-      timestamp: now,
-      longs: recentLongs,
-      shorts: recentShorts,
-    });
-
-    // храним 24ч (1440 минут)
-    if (this.marketStats.volumeHistory.length > 1440) {
-      this.marketStats.volumeHistory.shift();
-    }
-
-    // 🔥 вернул старую «живую» механику
-    this.marketStats.activeLiquidations = Math.max(0, this.marketStats.activeLiquidations - 5);
-
-    this.broadcast({
-      type: 'marketStats',
-      data: this.marketStats
-    });
-  }, 60000); // раз в 1 минуту
-}
+      this.broadcast({
+        type: 'marketStats',
+        data: this.marketStats
+      });
+    }, 60000); // обновление раз в минуту
+  }
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

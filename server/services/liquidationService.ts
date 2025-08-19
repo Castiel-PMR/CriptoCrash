@@ -104,7 +104,7 @@ export class LiquidationService {
     const pollCoinGlass = async () => {
       try {
         const response = await fetch(
-          'https://open-api-v4.coinglass.com/api/futures/liquidation_vol_chart?interval=24h',
+          'https://open-api-v4.coinglass.com/api/futures/liquidation_chart?interval=24h',
           {
             headers: {
               'CG-API-KEY': '03e3b7082c31433e908df011a8fa0924',

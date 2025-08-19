@@ -1,3 +1,4 @@
+// services/LiquidationService.ts
 import { WebSocketServer, WebSocket } from 'ws';
 import { Liquidation, MarketStats } from '@shared/schema';
 
@@ -17,8 +18,8 @@ export class LiquidationService {
   constructor(private wss: WebSocketServer) {
     this.setupWebSocketServer();
     this.connectToBinance();
-    this.startCoinGlassPolling(); // ✅ берём статистику только отсюда
-    this.startStatsUpdates();     // ✅ только обновление ratio + active
+    this.startCoinGlassPolling(); // ✅ теперь с v4
+    this.startStatsUpdates();     
   }
 
   private setupWebSocketServer() {
@@ -98,32 +99,28 @@ export class LiquidationService {
     };
   }
 
-  // ✅ CoinGlass обновляет только totalLongs/totalShorts
+  // ✅ обновлённый метод с CoinGlass v4 API
   private async startCoinGlassPolling() {
     const pollCoinGlass = async () => {
       try {
         const response = await fetch(
-          'https://open-api.coinglass.com/public/v2/liquidation_vol_chart?interval=24h'
+          'https://open-api-v4.coinglass.com/api/futures/liquidation_vol_chart?interval=24h',
+          {
+            headers: {
+              'CG-API-KEY': '03e3b7082c31433e908df011a8fa0924',
+              'accept': 'application/json'
+            }
+          }
         );
 
         console.log("CoinGlass response status:", response.status);
 
-        let text;
-        try {
-          text = await response.text();
-        } catch (err) {
-          console.error("Failed to read CoinGlass response text:", err);
+        if (!response.ok) {
+          console.error("CoinGlass API error:", await response.text());
           return;
         }
 
-        let data: any;
-        try {
-          data = JSON.parse(text);
-        } catch (err) {
-          console.error("Failed to parse CoinGlass JSON:", err);
-          console.log("Raw response text:", text);
-          return;
-        }
+        const data: any = await response.json();
 
         if (data.data) {
           if (!this.firstPollLogged) {
@@ -180,6 +177,7 @@ export class LiquidationService {
     }
     return 0;
   }
+
   private extractShorts(item: any): number {
     if (!item) return 0;
     if (typeof item === "object") {

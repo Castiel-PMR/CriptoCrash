@@ -154,10 +154,8 @@ export class LiquidationService {
       type: 'marketStats',
       data: this.marketStats
     });
-  }, 60000); // раз в минуту
+  }, 60000); // раз в 1 минуту
 }
-
-
 
   private broadcast(message: any) {
     const data = JSON.stringify(message);

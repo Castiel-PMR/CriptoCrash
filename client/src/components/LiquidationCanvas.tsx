@@ -281,6 +281,7 @@ export function LiquidationCanvas({
       decay: Math.random() * 0.015 + 0.008, // Longer lasting coins
       color: '#ffd700', // Gold color for coins
       size: Math.random() * 6 + 4, // Slightly bigger coins
+      createdAt: Date.now(), // 🔥 добавляем
     };
   }, []);
 
@@ -402,6 +403,7 @@ export function LiquidationCanvas({
       decay,
       color: colors[Math.floor(Math.random() * colors.length)],
       size,
+      createdAt: Date.now(), // 🔥 добавили обязательное поле
     };
   }, []);
 
@@ -1475,7 +1477,6 @@ export function LiquidationCanvas({
       />
       
 
-      
       {/* Flashing text "Click to explode bags" in center */}
       {showFlashText && (
         <div 

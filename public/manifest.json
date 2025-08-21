@@ -1,6 +1,8 @@
 {
   "name": "CryptoCrash",
   "short_name": "CryptoCrash",
+  "description": "Real-time cryptocurrency liquidations tracker",
+  "start_url": "/",
   "icons": [
     {
       "src": "/favicon-16x16.png",
@@ -15,10 +17,18 @@
     {
       "src": "/apple-touch-icon.png",
       "sizes": "180x180",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
     }
   ],
   "theme_color": "#0d0d0d",
   "background_color": "#0d0d0d",
-  "display": "standalone"
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["finance", "cryptocurrency"]
 }

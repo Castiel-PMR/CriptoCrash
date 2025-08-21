@@ -28,6 +28,7 @@ export interface Particle {
   decay: number;
   color: string;
   size: number;
+  createdAt: number;
 }
 
 export interface Cannon {

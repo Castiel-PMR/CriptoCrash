@@ -2,6 +2,16 @@ import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { Liquidation, Platform } from '@shared/schema';
 import { LiquidationBlock, Particle, AnimationState, Cannon, Cannonball } from '../types/liquidation';
 
+// Константы для оптимизации производительности
+const MAX_PARTICLES = 200;  // Максимум активных частиц
+const PARTICLE_LIFETIME = 2000; // Время жизни частицы в мс
+const MAX_PARTICLES_PER_EXPLOSION = 30; // Максимум частиц при взрыве
+
+// Расширяем интерфейс Particle
+interface ExtendedParticle extends Particle {
+  createdAt: number;
+}
+
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
   isPaused: boolean;
@@ -15,6 +25,11 @@ interface ExtendedAnimationState extends AnimationState {
   rightCannon: Cannon;
   cannonballs: Cannonball[];
 }
+
+// Константы для оптимизации производительности
+const MAX_PARTICLES = 200;  // Максимум активных частиц
+const PARTICLE_LIFETIME = 2000; // Время жизни частицы в мс
+const MAX_PARTICLES_PER_EXPLOSION = 30; // Максимум частиц при взрыве
 
 export function LiquidationCanvas({ 
   liquidations, 
@@ -270,7 +285,7 @@ export function LiquidationCanvas({
   }, []);
 
   // Create coin particle for explosion
-  const createParticle = useCallback((x: number, y: number, isLong: boolean): Particle => {
+  const createParticle = useCallback((x: number, y: number, isLong: boolean): ExtendedParticle => {
     return {
       id: Math.random().toString(),
       x,
@@ -281,6 +296,7 @@ export function LiquidationCanvas({
       decay: Math.random() * 0.015 + 0.008, // Longer lasting coins
       color: '#ffd700', // Gold color for coins
       size: Math.random() * 6 + 4, // Slightly bigger coins
+      createdAt: Date.now() // Добавляем время создания
     };
   }, []);
 
@@ -445,9 +461,12 @@ export function LiquidationCanvas({
         const explosionType = Math.floor(Math.random() * 10);
         
         // Create special click explosion particles with random animation
-        const particleCount = Math.min(50, Math.floor(bag.width / 2));
-        for (let j = 0; j < particleCount; j++) {
-          state.particles.push(createClickParticle(
+        const particleCount = Math.min(MAX_PARTICLES_PER_EXPLOSION, Math.floor(bag.width / 2));
+        
+        // Проверяем количество существующих частиц
+        if (state.particles.length < MAX_PARTICLES) {
+          for (let j = 0; j < particleCount; j++) {
+            state.particles.push(createClickParticle(
             bag.x + bag.width / 2,
             bag.y + bag.height / 2,
             bag.isLong,
@@ -615,6 +634,11 @@ export function LiquidationCanvas({
     particle.vy += 0.1 * frameMultiplier; // Gravity
     particle.life -= particle.decay * frameMultiplier;
     particle.size *= Math.pow(0.98, frameMultiplier);
+    
+    // Проверяем время жизни
+    if (Date.now() - particle.createdAt > PARTICLE_LIFETIME) {
+        return false;
+    }
     
     return particle.life > 0;
   }, []);
@@ -1316,9 +1340,18 @@ export function LiquidationCanvas({
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {
+    if (document.hidden) return; // Пропускаем анимацию если вкладка неактивна
+    
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
+    
+    const state = animationStateRef.current;
+    
+    // Очищаем старые частицы если их слишком много
+    if (state.particles.length > MAX_PARTICLES) {
+      state.particles = state.particles.slice(-MAX_PARTICLES);
+    }
 
     const state = animationStateRef.current;
     const deltaTime = currentTime - state.lastTime;

@@ -1,11 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import type { JSX } from 'react';
 import { Liquidation, Platform } from '@shared/schema';
 import { LiquidationBlock, Particle, AnimationState, Cannon, Cannonball } from '../types/liquidation';
-
-// Константы для оптимизации производительности
-const MAX_PARTICLES = 200;  // Максимум активных частиц
-const PARTICLE_LIFETIME = 2000; // Время жизни частицы в мс
-const MAX_PARTICLES_PER_EXPLOSION = 30; // Максимум частиц при взрыве
 
 // Расширяем интерфейс Particle
 interface ExtendedParticle extends Particle {
@@ -27,9 +23,11 @@ interface ExtendedAnimationState extends AnimationState {
 }
 
 // Константы для оптимизации производительности
+// Animation Constants
 const MAX_PARTICLES = 200;  // Максимум активных частиц
 const PARTICLE_LIFETIME = 2000; // Время жизни частицы в мс
 const MAX_PARTICLES_PER_EXPLOSION = 30; // Максимум частиц при взрыве
+const FRAME_RATE = 60; // Целевой FPS
 
 export function LiquidationCanvas({ 
   liquidations, 
@@ -98,7 +96,7 @@ export function LiquidationCanvas({
   const audioContextRef = useRef<AudioContext | null>(null);
   
   // Initialize audio context on first user interaction
-  const initAudioContext = useCallback(() => {
+  const initAudioContext = useCallback((): void => {
     if (!audioContextRef.current) {
       try {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -165,7 +163,7 @@ export function LiquidationCanvas({
     if (showFlashText) {
       setIsFlashing(true);
       const flashInterval = setInterval(() => {
-        setIsFlashing(prev => !prev);
+        setIsFlashing((prev: boolean) => !prev);
       }, 300); // Flashing every 300ms
 
       return () => clearInterval(flashInterval);
@@ -175,7 +173,7 @@ export function LiquidationCanvas({
   }, [showFlashText]);
 
   // Update canvas size
-  const updateCanvasSize = useCallback(() => {
+  const updateCanvasSize = useCallback((): void => {
     if (!canvasRef.current) return;
     
     // Получаем размер родительского контейнера, а не всего окна
@@ -296,7 +294,7 @@ export function LiquidationCanvas({
       decay: Math.random() * 0.015 + 0.008, // Longer lasting coins
       color: '#ffd700', // Gold color for coins
       size: Math.random() * 6 + 4, // Slightly bigger coins
-      createdAt: Date.now() // Добавляем время создания
+      createdAt: Date.now() // Add creation time
     };
   }, []);
 
@@ -422,7 +420,7 @@ export function LiquidationCanvas({
   }, []);
 
   // Handle interaction (mouse click or touch)
-  const handleCanvasInteraction = useCallback((clientX: number, clientY: number) => {
+  const handleCanvasInteraction = useCallback((clientX: number, clientY: number): void => {
     if (!canvasRef.current) return;
     
     // Initialize audio context on first user interaction
@@ -439,7 +437,7 @@ export function LiquidationCanvas({
     
     if (clickX >= buttonX && clickX <= buttonX + buttonSize && 
         clickY >= buttonY && clickY <= buttonY + buttonSize) {
-      setIsSoundMuted(prev => !prev);
+      setIsSoundMuted((prev: boolean) => !prev);
       return;
     }
     
@@ -726,7 +724,7 @@ export function LiquidationCanvas({
   }, []);
 
   // Draw money bag without dollar sign for better readability
-  const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock) => {
+  const drawLiquidationBlock = useCallback((ctx: CanvasRenderingContext2D, block: LiquidationBlock): void => {
     ctx.save();
     ctx.globalAlpha = block.opacity;
     ctx.translate(block.x + block.width / 2, block.y + block.height / 2);
@@ -805,7 +803,7 @@ export function LiquidationCanvas({
   }, []);
 
   // Draw particle with different shapes based on color/type
-  const drawParticle = useCallback((ctx: CanvasRenderingContext2D, particle: Particle) => {
+  const drawParticle = useCallback((ctx: CanvasRenderingContext2D, particle: Particle): void => {
     ctx.save();
     ctx.globalAlpha = particle.life;
     
@@ -903,7 +901,7 @@ export function LiquidationCanvas({
   }, []);
 
   // Draw cannon in historical 17-18 century style
-  const drawCannon = useCallback((ctx: CanvasRenderingContext2D, cannon: Cannon) => {
+  const drawCannon = useCallback((ctx: CanvasRenderingContext2D, cannon: Cannon): void => {
     ctx.save();
     ctx.translate(cannon.x, cannon.y);
     
@@ -1065,7 +1063,7 @@ export function LiquidationCanvas({
   }, []);
 
   // Draw cannonball (historical iron ball)
-  const drawCannonball = useCallback((ctx: CanvasRenderingContext2D, ball: Cannonball) => {
+  const drawCannonball = useCallback((ctx: CanvasRenderingContext2D, ball: Cannonball): void => {
     ctx.save();
     
     // Iron cannonball with gradient for 3D effect
@@ -1165,7 +1163,7 @@ export function LiquidationCanvas({
   }, [timeframe]);
 
   // Draw real Bitcoin candlestick chart background  
-  const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, opacity?: number) => {
+  const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, opacity?: number): void => {
     if (bitcoinCandles.length === 0) return;
     
     // Find min/max prices from all candles
@@ -1339,7 +1337,7 @@ export function LiquidationCanvas({
   }, [bitcoinCandles]);
 
   // Animation loop
-  const animate = useCallback((currentTime: number) => {
+  const animate = useCallback((currentTime: number): void => {
     if (document.hidden) return; // Пропускаем анимацию если вкладка неактивна
     
     const canvas = canvasRef.current;
@@ -1353,7 +1351,6 @@ export function LiquidationCanvas({
       state.particles = state.particles.slice(-MAX_PARTICLES);
     }
 
-    const state = animationStateRef.current;
     const deltaTime = currentTime - state.lastTime;
     state.lastTime = currentTime;
     state.isPaused = isPaused;
@@ -1377,7 +1374,7 @@ export function LiquidationCanvas({
       });
 
       // Update and draw particles
-      state.particles = state.particles.filter(particle => {
+      state.particles = state.particles.filter((particle: Particle) => {
         const alive = updateParticle(particle, deltaTime);
         if (alive) {
           drawParticle(ctx, particle);

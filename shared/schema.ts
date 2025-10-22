@@ -24,6 +24,14 @@ export const marketStatsSchema = z.object({
     longs: z.number(),
     shorts: z.number(),
   })),
+  // 🔥 НОВАЯ МЕТРИКА: Liquidation Delta по движению цены
+  priceMovementDelta: z.object({
+    lastPrice: z.number(),
+    priceChange: z.number(), // Изменение цены за последний час
+    longsPerPriceUnit: z.number(), // $ ликвидаций лонгов на $1 движения цены
+    shortsPerPriceUnit: z.number(), // $ ликвидаций шортов на $1 движения цены
+    deltaRatio: z.number(), // Соотношение силы (>1 = больше ликвидаций лонгов)
+  }).optional(),
 });
 
 export type Liquidation = z.infer<typeof liquidationSchema>;

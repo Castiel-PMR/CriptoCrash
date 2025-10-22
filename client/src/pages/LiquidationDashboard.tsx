@@ -16,6 +16,7 @@ export default function LiquidationDashboard() {
   
   const { 
     liquidations, 
+    lastFiveLiquidations, // 🔥 НОВОЕ: Последние 5 ликвидаций
     marketStats, 
     isConnected, 
     connectionError,
@@ -59,7 +60,11 @@ export default function LiquidationDashboard() {
         
         {/* Right Sidebar - Mobile Responsive */}
         <div className="w-full lg:w-80 bg-cyber-gray/95 backdrop-blur-md border-t lg:border-t-0 lg:border-l border-cyber-border p-4 space-y-4 overflow-y-auto max-h-[40vh] lg:max-h-none">
-          {/* Liquidation Filter Panel */}
+          
+          {/* 🔥 1. Market Sentiment (Liquidation Delta) - ВВЕРХУ */}
+          <MarketSentiment stats={marketStats} />
+          
+          {/* 🔥 2. Liquidation Filter Panel - ПОСЕРЕДИНЕ */}
           <div className="bg-cyber-dark/50 rounded-lg border border-cyber-border p-4">
             <h3 className="text-lg font-semibold mb-3 text-accent-yellow">Liquidation Filter</h3>
             <div className="space-y-3">
@@ -75,7 +80,7 @@ export default function LiquidationDashboard() {
                 <input
                   type="range"
                   min="1000"
-                  max="10000000"
+                  max="1000000"
                   step="1000"
                   value={minLiquidationAmount}
                   onChange={(e) => setMinLiquidationAmount(parseInt(e.target.value))}
@@ -83,7 +88,7 @@ export default function LiquidationDashboard() {
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>$1K</span>
-                  <span>$10M</span>
+                  <span>$1M</span>
                 </div>
               </div>
               
@@ -136,11 +141,8 @@ export default function LiquidationDashboard() {
             </div>
           </div>
           
-          {/* Recent Liquidations */}
-          <LiveStatsPanel recentLiquidations={filteredLiquidations} />
-          
-          {/* Market Sentiment */}
-          <MarketSentiment stats={marketStats} />
+          {/* 🔥 3. Recent Liquidations (Последние 5) - ВНИЗУ */}
+          <LiveStatsPanel recentLiquidations={lastFiveLiquidations} />
         </div>
       </div>
         
@@ -190,7 +192,7 @@ export default function LiquidationDashboard() {
                 <input
                   type="range"
                   min="1000"
-                  max="10000000"
+                  max="1000000"
                   step="1000"
                   value={minLiquidationAmount}
                   onChange={(e) => setMinLiquidationAmount(parseInt(e.target.value))}

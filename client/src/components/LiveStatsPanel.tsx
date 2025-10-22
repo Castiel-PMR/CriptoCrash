@@ -16,12 +16,16 @@ export function LiveStatsPanel({ recentLiquidations }: LiveStatsPanelProps) {
     return `$${amount.toFixed(0)}`;
   };
 
-  // 🔥 ОПТИМИЗАЦИЯ: Показываем только 3 последние (было 5)
-  const displayLiquidations = recentLiquidations.slice(-3).reverse();
+  // 🔥 ИСПРАВЛЕНО: Показываем ровно 5 последних (не фильтруем, не обрезаем)
+  // Данные приходят уже готовые из lastFiveLiquidations
+  const displayLiquidations = recentLiquidations.slice(0, 5).reverse();
 
   return (
     <div className="bg-cyber-gray/90 backdrop-blur-md rounded-lg border border-cyber-border p-4 w-64">
-      <h3 className="text-lg font-semibold mb-3 text-accent-blue">Recent Liquidations</h3>
+      <h3 className="text-base font-semibold mb-3 text-accent-blue flex items-center gap-2">
+        💎 Крупные ликвидации
+        <span className="text-xs text-gray-400">$50K+</span>
+      </h3>
       <div className="space-y-2 text-sm font-mono">
         {displayLiquidations.length > 0 ? (
           displayLiquidations.map((liquidation) => (

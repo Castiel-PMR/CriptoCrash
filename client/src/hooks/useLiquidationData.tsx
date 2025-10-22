@@ -3,6 +3,7 @@ import { Liquidation, MarketStats } from '@shared/schema';
 
 interface UseLiquidationDataReturn {
   liquidations: Liquidation[];
+  lastFiveLiquidations: Liquidation[]; // 🔥 НОВОЕ: Последние 5 ликвидаций (не стираются)
   marketStats: MarketStats;
   isConnected: boolean;
   connectionError: string | null;
@@ -11,6 +12,8 @@ interface UseLiquidationDataReturn {
 
 export function useLiquidationData(): UseLiquidationDataReturn {
   const [liquidations, setLiquidations] = useState<Liquidation[]>([]);
+  // 🔥 НОВОЕ: Отдельное хранилище для последних 5 ликвидаций (не стираются)
+  const [lastFiveLiquidations, setLastFiveLiquidations] = useState<Liquidation[]>([]);
   const [marketStats, setMarketStats] = useState<MarketStats>({
     totalLongs: 0,
     totalShorts: 0,
@@ -48,6 +51,14 @@ export function useLiquidationData(): UseLiquidationDataReturn {
                   // 🔥 ОПТИМИЗАЦИЯ: Храним только 30 последних (было 100)
                   return updated.slice(-30);
                 });
+                
+                // 🔥 НОВОЕ: Обновляем последние 5 ликвидаций (только $50K+)
+                if (liquidation.value >= 50000) {
+                  setLastFiveLiquidations(prev => {
+                    const updated = [...prev, liquidation];
+                    return updated.slice(-5); // Всегда последние 5 крупных
+                  });
+                }
               }
               break;
               
@@ -56,7 +67,13 @@ export function useLiquidationData(): UseLiquidationDataReturn {
               break;
               
             case 'recentLiquidations':
-              setLiquidations(message.data || []);
+              const recentLiqs = message.data || [];
+              setLiquidations(recentLiqs);
+              // 🔥 НОВОЕ: Инициализируем последние 5 (только $50K+)
+              if (recentLiqs.length > 0) {
+                const filtered50k = recentLiqs.filter((liq: Liquidation) => liq.value >= 50000);
+                setLastFiveLiquidations(filtered50k.slice(-5));
+              }
               break;
           }
         } catch (error) {
@@ -105,6 +122,7 @@ export function useLiquidationData(): UseLiquidationDataReturn {
 
   return {
     liquidations,
+    lastFiveLiquidations, // 🔥 НОВОЕ: Возвращаем последние 5
     marketStats,
     isConnected,
     connectionError,

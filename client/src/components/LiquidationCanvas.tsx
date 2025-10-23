@@ -1150,6 +1150,28 @@ export function LiquidationCanvas({
     return () => clearInterval(interval);
   }, [timeframe, chartSymbol]); // 🔥 Перезагружаем при смене символа
 
+  // 🔥 НОВОЕ: Умное форматирование цены в зависимости от величины
+  const formatPrice = useCallback((price: number): string => {
+    if (price >= 1000) {
+      // Большие цены (BTC, ETH) - целые числа или 1 знак
+      return price >= 10000 
+        ? Math.round(price).toLocaleString() 
+        : price.toFixed(1);
+    } else if (price >= 1) {
+      // Средние цены (большинство альткоинов) - 2-3 знака
+      return price.toFixed(2);
+    } else if (price >= 0.01) {
+      // Мелкие монеты (0.01 - 1.00) - 4 знака
+      return price.toFixed(4);
+    } else if (price >= 0.0001) {
+      // Очень мелкие (0.0001 - 0.01) - 6 знаков
+      return price.toFixed(6);
+    } else {
+      // Супер мелкие (< 0.0001) - 8 знаков
+      return price.toFixed(8);
+    }
+  }, []);
+
   // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, opacity?: number) => {
     if (bitcoinCandles.length === 0) return;
@@ -1274,8 +1296,8 @@ export function LiquidationCanvas({
       const price = minPrice + (i * priceStep);
       const y = margin + chartHeight - (i * chartHeight / 7);
       
-      // Price label
-      ctx.fillText(`${Math.round(price).toLocaleString()}`, chartWidth + scaleWidth - 5, y + 4);
+      // Price label with smart formatting
+      ctx.fillText(formatPrice(price), chartWidth + scaleWidth - 5, y + 4);
       
       // Small tick mark
       ctx.globalAlpha = 0.4;
@@ -1303,12 +1325,12 @@ export function LiquidationCanvas({
       ctx.lineTo(chartWidth + scaleWidth, currentPriceY);
       ctx.stroke();
       
-      // Current price label without red background - just the text
+      // Current price label with smart formatting
       ctx.globalAlpha = 0.9;
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 10px JetBrains Mono, monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(`${Math.round(currentPrice).toLocaleString()}`, chartWidth + scaleWidth/2, currentPriceY + 3);
+      ctx.fillText(formatPrice(currentPrice), chartWidth + scaleWidth/2, currentPriceY + 3);
       
       // Add live indicator (pulsing dot)
       const timeSinceUpdate = Date.now() - lastUpdateTime;
@@ -1326,7 +1348,7 @@ export function LiquidationCanvas({
     // No header text - clean chart appearance
     
     ctx.restore();
-  }, [bitcoinCandles]);
+  }, [bitcoinCandles, formatPrice]); // 🔥 Добавлена зависимость formatPrice
 
   // Animation loop
   const animate = useCallback((currentTime: number) => {

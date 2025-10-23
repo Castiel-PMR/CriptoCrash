@@ -3,6 +3,7 @@ import { LiquidationCanvas } from '../components/LiquidationCanvas';
 import { StatsHeader } from '../components/StatsHeader';
 import { LiveStatsPanel } from '../components/LiveStatsPanel';
 import { MarketSentiment } from '../components/MarketSentiment';
+import { SymbolSearch } from '../components/SymbolSearch';
 import { useLiquidationData } from '../hooks/useLiquidationData';
 import { Pause, Play, Settings, RefreshCw } from 'lucide-react';
 
@@ -11,6 +12,7 @@ export default function LiquidationDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
   const [timeframe, setTimeframe] = useState('1m'); // Default 1-minute timeframe
+  const [chartSymbol, setChartSymbol] = useState('BTCUSDT'); // 🔥 НОВОЕ: Выбранный символ для графика
 
   const [chartOpacity, setChartOpacity] = useState(100); // Opacity in percentage
   
@@ -50,11 +52,20 @@ export default function LiquidationDashboard() {
       <div className="flex flex-col lg:flex-row h-screen pt-20">
         {/* Main Canvas Area */}
         <div className="flex-1 relative min-h-[60vh] lg:min-h-0">
+          {/* 🔥 Symbol Search - левый верхний угол */}
+          <div className="absolute top-4 left-4 z-10">
+            <SymbolSearch 
+              selectedSymbol={chartSymbol}
+              onSymbolChange={setChartSymbol}
+            />
+          </div>
+          
           <LiquidationCanvas 
             liquidations={filteredLiquidations}
             isPaused={isPaused}
             chartOpacity={chartOpacity}
             timeframe={timeframe}
+            chartSymbol={chartSymbol}
           />
         </div>
         

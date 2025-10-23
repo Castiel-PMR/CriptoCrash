@@ -7,6 +7,7 @@ interface LiquidationCanvasProps {
   isPaused: boolean;
   chartOpacity?: number;
   timeframe: string;
+  chartSymbol?: string; // 🔥 НОВОЕ: Символ для фонового графика
 }
 
 interface ExtendedAnimationState extends AnimationState {
@@ -20,7 +21,8 @@ export function LiquidationCanvas({
   liquidations, 
   isPaused, 
   chartOpacity = 100,
-  timeframe 
+  timeframe,
+  chartSymbol = 'BTCUSDT' // 🔥 По умолчанию BTC
 }: LiquidationCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationStateRef = useRef<ExtendedAnimationState>({
@@ -1104,8 +1106,8 @@ export function LiquidationCanvas({
       try {
         const limit = timeframeLimits[timeframe] || 48;
         
-        // Get candlestick data based on selected timeframe
-        const response = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=BTCUSDT&interval=${timeframe}&limit=${limit}`);
+        // Get candlestick data based on selected timeframe and symbol
+        const response = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${chartSymbol}&interval=${timeframe}&limit=${limit}`);
         const data = await response.json();
         
         // Convert to OHLCV format
@@ -1120,9 +1122,9 @@ export function LiquidationCanvas({
         
         setBitcoinCandles(candles);
         setLastUpdateTime(Date.now());
-        console.log('Обновлены данные Bitcoin:', candles.length, `свечей (${timeframe} интервал)`);
+        console.log(`Обновлены данные ${chartSymbol}:`, candles.length, `свечей (${timeframe} интервал)`);
       } catch (error) {
-        console.error('Ошибка загрузки данных Bitcoin:', error);
+        console.error(`Ошибка загрузки данных ${chartSymbol}:`, error);
         // Fallback to previous static data if API fails
         const fallbackData = [];
         const basePrice = 96000;
@@ -1146,7 +1148,7 @@ export function LiquidationCanvas({
     // 🔥 ОПТИМИЗАЦИЯ: Обновление каждые 10 секунд вместо 1 секунды (экономия памяти и CPU)
     const interval = setInterval(fetchBitcoinData, 10 * 1000);
     return () => clearInterval(interval);
-  }, [timeframe]);
+  }, [timeframe, chartSymbol]); // 🔥 Перезагружаем при смене символа
 
   // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, opacity?: number) => {

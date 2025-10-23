@@ -1168,7 +1168,7 @@ export function LiquidationCanvas({
       return price.toFixed(6);
     } else {
       // Супер мелкие (< 0.0001) - 8 знаков
-      return price.toFixed(8);
+      return price.toFixed(9);
     }
   }, []);
 

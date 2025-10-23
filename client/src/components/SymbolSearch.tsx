@@ -46,13 +46,13 @@ export function SymbolSearch({ selectedSymbol, onSymbolChange }: SymbolSearchPro
         const response = await fetch('https://fapi.binance.com/fapi/v1/exchangeInfo');
         const data = await response.json();
         
-        // Фильтруем только USDT пары с активным статусом
+        // Фильтруем только USDT пары с активным статусом (включая 1000WHY, 10000LADYS и т.д.)
         const usdtSymbols = data.symbols
           .filter((s: any) => 
             s.symbol.endsWith('USDT') && 
             s.status === 'TRADING' &&
-            s.contractType === 'PERPETUAL' &&
-            /^[A-Z0-9]+USDT$/.test(s.symbol) // Только латиница и цифры
+            s.contractType === 'PERPETUAL'
+            // 🔥 Убрали regex фильтр - теперь все валидные пары доступны
           )
           .map((s: any) => s.symbol)
           .sort(); // Сортируем по алфавиту

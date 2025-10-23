@@ -1152,25 +1152,32 @@ export function LiquidationCanvas({
 
   // 🔥 НОВОЕ: Умное форматирование цены в зависимости от величины
   const formatPrice = useCallback((price: number): string => {
-    if (price >= 1000) {
-      // Большие цены (BTC, ETH) - целые числа или 1 знак
-      return price >= 10000 
-        ? Math.round(price).toLocaleString() 
-        : price.toFixed(1);
-    } else if (price >= 1) {
-      // Средние цены (большинство альткоинов) - 2-3 знака
-      return price.toFixed(2);
-    } else if (price >= 0.01) {
-      // Мелкие монеты (0.01 - 1.00) - 4 знака
-      return price.toFixed(4);
-    } else if (price >= 0.0001) {
-      // Очень мелкие (0.0001 - 0.01) - 6 знаков
-      return price.toFixed(6);
-    } else {
-      // Супер мелкие (< 0.0001) - 8 знаков
-      return price.toFixed(11);
-    }
-  }, []);
+  if (!price || !isFinite(price)) return "—";
+
+  // Чем меньше цена — тем больше знаков после запятой.
+  // Основано на логике Binance UI.
+  let decimals: number;
+
+  if (price >= 10000) decimals = 0;        // BTC, ETH (целые)
+  else if (price >= 1000) decimals = 1;
+  else if (price >= 100) decimals = 2;
+  else if (price >= 10) decimals = 3;
+  else if (price >= 1) decimals = 4;
+  else if (price >= 0.1) decimals = 5;
+  else if (price >= 0.01) decimals = 6;
+  else if (price >= 0.001) decimals = 7;
+  else if (price >= 0.0001) decimals = 8;
+  else if (price >= 0.00001) decimals = 9;
+  else if (price >= 0.000001) decimals = 10;
+  else decimals = 12; // для SHIB, PEPE и других "супер мелких"
+
+  // Форматируем с запятыми для удобства
+  return Number(price).toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}, []);
+
 
   // Draw real Bitcoin candlestick chart background  
   const drawBitcoinChart = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number, opacity?: number) => {

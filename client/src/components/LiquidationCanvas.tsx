@@ -1105,41 +1105,55 @@ export function LiquidationCanvas({
     const fetchBitcoinData = async () => {
       try {
         const limit = timeframeLimits[timeframe] || 48;
-        
-        // Get candlestick data based on selected timeframe and symbol
-        const response = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${chartSymbol}&interval=${timeframe}&limit=${limit}`);
-        const data = await response.json();
-        
-        // Convert to OHLCV format
-        const candles = data.map((kline: any[]) => ({
-          timestamp: kline[0],
-          open: parseFloat(kline[1]),
-          high: parseFloat(kline[2]),
-          low: parseFloat(kline[3]),
-          close: parseFloat(kline[4]),
-          volume: parseFloat(kline[5])
-        }));
-        
+        let data: any[] = [];
+
+        // 1️⃣ Основной запрос — фьючерсы (Futures API)
+        let response = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${chartSymbol}&interval=${timeframe}&limit=${limit}`);
+        data = await response.json();
+
+        // 2️⃣ Если пусто или ошибка — fallback на Spot API
+        if (!Array.isArray(data) || data.length === 0 || (data as any).code) {
+          console.warn(`⚠️ Futures data empty/error for ${chartSymbol}, trying Spot API...`);
+          response = await fetch(`https://api.binance.com/api/v3/klines?symbol=${chartSymbol}&interval=${timeframe}&limit=${limit}`);
+          data = await response.json();
+        }
+
+        // 3️⃣ Если всё ещё пусто — не обновляем график
+        if (!Array.isArray(data) || data.length === 0 || (data as any).code) {
+          console.error(`❌ No data available for ${chartSymbol} (neither Futures nor Spot)`);
+          return;
+        }
+
+        // 4️⃣ Конвертируем и фильтруем невалидные свечи
+        const candles = data
+          .map((kline: any[]) => ({
+            timestamp: kline[0],
+            open: parseFloat(kline[1]),
+            high: parseFloat(kline[2]),
+            low: parseFloat(kline[3]),
+            close: parseFloat(kline[4]),
+            volume: parseFloat(kline[5]),
+          }))
+          .filter(c => {
+            // Фильтруем пустые свечи (все цены равны + нулевой объем)
+            const isEmpty = c.open === c.close && c.high === c.low && c.volume === 0;
+            // Фильтруем NaN значения
+            const isValid = !isNaN(c.open) && !isNaN(c.high) && !isNaN(c.low) && !isNaN(c.close);
+            return !isEmpty && isValid;
+          });
+
+        // 5️⃣ Проверка на минимальное количество валидных свечей
+        if (candles.length < 5) {
+          console.warn(`⚠️ Too few valid candles for ${chartSymbol}: ${candles.length}`);
+          return;
+        }
+
         setBitcoinCandles(candles);
         setLastUpdateTime(Date.now());
-        console.log(`Обновлены данные ${chartSymbol}:`, candles.length, `свечей (${timeframe} интервал)`);
+        console.log(`✅ ${chartSymbol}: ${candles.length} valid candles (${timeframe})`);
       } catch (error) {
-        console.error(`Ошибка загрузки данных ${chartSymbol}:`, error);
-        // Fallback to previous static data if API fails
-        const fallbackData = [];
-        const basePrice = 96000;
-        for (let i = 0; i < 24; i++) {
-          const price = basePrice + (Math.random() - 0.5) * 2000;
-          fallbackData.push({
-            timestamp: Date.now() - (24 - i) * 60 * 60 * 1000,
-            open: price,
-            high: price + Math.random() * 500,
-            low: price - Math.random() * 500,
-            close: price + (Math.random() - 0.5) * 200,
-            volume: Math.random() * 1000
-          });
-        }
-        setBitcoinCandles(fallbackData);
+        console.error(`❌ Error loading ${chartSymbol}:`, error);
+        // Не создаем fallback данные — просто оставляем предыдущий график
       }
     };
     

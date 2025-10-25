@@ -40,6 +40,7 @@ export class LiquidationService {
     // Для хранения истории между перезапусками можно использовать PostgreSQL.
     this.startStatsUpdates();
     this.startStatsReset();
+    this.startDeltaCalculation(); // ✅ НОВОЕ: Отдельный таймер для расчета метрики
   }
 
   private setupWebSocketServer() {
@@ -198,9 +199,9 @@ export class LiquidationService {
   }
 
   private processLiquidation(liquidation: Liquidation) {
-    // Добавляем в список последних ликвидаций
+    // ✅ Ограничиваем массив сразу (не даем накапливаться до 100)
     this.recentLiquidations.push(liquidation);
-    if (this.recentLiquidations.length > 100) {
+    if (this.recentLiquidations.length > 30) { // Уменьшено с 100 до 30
       this.recentLiquidations.shift();
     }
 
@@ -217,7 +218,7 @@ export class LiquidationService {
 
     this.marketStats.activeLiquidations++;
 
-    // 🔥 НОВОЕ: Трекаем цену BTC для расчета delta (берем BTCUSDT как базовую)
+    // 🔥 Трекаем цену BTC (обновляем БЕЗ расчета метрики)
     if (liquidation.symbol === 'BTCUSDT') {
       this.priceTracking.btcPrice = liquidation.price;
       
@@ -226,12 +227,11 @@ export class LiquidationService {
         this.priceTracking.startPrice = liquidation.price;
         this.priceTracking.startTime = Date.now();
       }
-      
-      this.calculatePriceMovementDelta();
+      // ✅ Расчет метрики вынесен на отдельный таймер (см. startDeltaCalculation)
     }
 
-    // Логирование каждой 10-й ликвидации для мониторинга
-    if (this.marketStats.activeLiquidations % 10 === 0) {
+    // ✅ Логирование каждой 100-й ликвидации (было каждая 10я - уменьшаем нагрузку)
+    if (this.marketStats.activeLiquidations % 100 === 0) {
       console.log(`Обработано ликвидаций: ${this.marketStats.activeLiquidations}, Longs: $${(this.marketStats.totalLongs/1000000).toFixed(2)}M, Shorts: $${(this.marketStats.totalShorts/1000000).toFixed(2)}M`);
     }
 
@@ -242,37 +242,44 @@ export class LiquidationService {
     });
   }
 
-  // 🔥 НОВОЕ: Расчет ликвидаций на единицу движения цены
+  // 🔥 ОПТИМИЗАЦИЯ: Расчет ликвидаций на единицу движения цены (раз в час)
   private calculatePriceMovementDelta() {
-    const currentTime = Date.now();
-    const hourInMs = 60 * 60 * 1000;
+    const priceChange = Math.abs(this.priceTracking.btcPrice - this.priceTracking.startPrice);
     
-    // Пересчитываем каждый час
-    if (currentTime - this.priceTracking.startTime >= hourInMs) {
-      const priceChange = Math.abs(this.priceTracking.btcPrice - this.priceTracking.startPrice);
+    // Избегаем деления на 0
+    if (priceChange > 10) { // Минимальное движение $10
+      const longsPerDollar = this.priceTracking.longsInPeriod / priceChange;
+      const shortsPerDollar = this.priceTracking.shortsInPeriod / priceChange;
       
-      // Избегаем деления на 0
-      if (priceChange > 10) { // Минимальное движение $10
-        const longsPerDollar = this.priceTracking.longsInPeriod / priceChange;
-        const shortsPerDollar = this.priceTracking.shortsInPeriod / priceChange;
-        
-        this.marketStats.priceMovementDelta = {
-          lastPrice: this.priceTracking.btcPrice,
-          priceChange: this.priceTracking.btcPrice - this.priceTracking.startPrice,
-          longsPerPriceUnit: longsPerDollar,
-          shortsPerPriceUnit: shortsPerDollar,
-          deltaRatio: shortsPerDollar > 0 ? longsPerDollar / shortsPerDollar : 1,
-        };
-        
-        console.log(`💰 Price Delta: BTC ${this.priceTracking.btcPrice.toFixed(0)}, Δ${priceChange.toFixed(0)}, Longs/$ ${longsPerDollar.toFixed(0)}, Shorts/$ ${shortsPerDollar.toFixed(0)}`);
-      }
+      this.marketStats.priceMovementDelta = {
+        lastPrice: this.priceTracking.btcPrice,
+        priceChange: this.priceTracking.btcPrice - this.priceTracking.startPrice,
+        longsPerPriceUnit: longsPerDollar,
+        shortsPerPriceUnit: shortsPerDollar,
+        deltaRatio: shortsPerDollar > 0 ? longsPerDollar / shortsPerDollar : 1,
+      };
       
-      // Сбрасываем трекинг для нового периода
-      this.priceTracking.startPrice = this.priceTracking.btcPrice;
-      this.priceTracking.startTime = currentTime;
-      this.priceTracking.longsInPeriod = 0;
-      this.priceTracking.shortsInPeriod = 0;
+      console.log(`💰 Price Delta: BTC ${this.priceTracking.btcPrice.toFixed(0)}, Δ${priceChange.toFixed(0)}, Longs/$ ${longsPerDollar.toFixed(0)}, Shorts/$ ${shortsPerDollar.toFixed(0)}`);
     }
+    
+    // Сбрасываем трекинг для нового периода
+    this.priceTracking.startPrice = this.priceTracking.btcPrice;
+    this.priceTracking.startTime = Date.now();
+    this.priceTracking.longsInPeriod = 0;
+    this.priceTracking.shortsInPeriod = 0;
+  }
+
+  // ✅ НОВОЕ: Отдельный таймер для расчета метрики каждый час
+  private startDeltaCalculation() {
+    // Первый расчет через 5 минут после старта (накопим данные)
+    setTimeout(() => {
+      this.calculatePriceMovementDelta();
+      
+      // Затем каждый час
+      setInterval(() => {
+        this.calculatePriceMovementDelta();
+      }, 60 * 60 * 1000); // 1 час
+    }, 5 * 60 * 1000); // 5 минут
   }
 
   private startStatsUpdates() {

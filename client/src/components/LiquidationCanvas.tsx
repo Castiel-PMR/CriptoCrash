@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Liquidation, Platform } from '@shared/schema';
 import { LiquidationBlock, Particle, AnimationState, Cannon, Cannonball } from '../types/liquidation';
+import { updateCannons, updateCannonballs, checkAndFireCannon, drawCannon, drawCannonball } from '../utils/CannonUtils';
 
 interface LiquidationCanvasProps {
   liquidations: Liquidation[];
@@ -513,56 +514,11 @@ export function LiquidationCanvas({
     block.y += block.velocity * (deltaTime / 16.67); // Нормализуем к 60 FPS (16.67ms на кадр)
     block.rotation += block.rotationSpeed;
 
-    // Check if bag is in cannon's destruction range (from bottom to middle-lower part)
-    const cannonRange = canvas.height * 0.70; // Range from bottom to 70% of screen height (gives chance for manual destruction)
-    const bottomLimit = canvas.height * 0.95; // Don't let bags reach the very bottom
-    
-    // Fire at random positions within the cannon range, not immediately at crossing
-    if (block.y + block.height >= cannonRange && block.y + block.height <= bottomLimit) {
-      const state = animationStateRef.current;
-      const leftCannon = state.leftCannon;
-      
-      // Progressive firing probability - higher chance closer to bottom
-      const bagProgress = (block.y + block.height - cannonRange) / (bottomLimit - cannonRange);
-      const baseProbability = 0.0005; // Very low base chance
-      const progressMultiplier = 1 + bagProgress * 4; // Up to 5x higher chance near bottom
-      const shouldFire = Math.random() < (baseProbability * progressMultiplier);
-      
-      // Fire left cannon only if it's not currently firing and random chance succeeds
-      if (!leftCannon.isFiring && shouldFire) {
-        const bagCenterX = block.x + block.width / 2;
-        const bagCenterY = block.y + block.height / 2;
-        
-        // Only use left cannon now
-        const activeCannon = leftCannon;
-        
-        // Calculate angle and fire
-        const dx = bagCenterX - activeCannon.x;
-        const dy = bagCenterY - activeCannon.y;
-        activeCannon.angle = Math.atan2(dy, dx);
-        activeCannon.isFiring = true;
-        activeCannon.fireProgress = 0;
-        activeCannon.targetBag = block.id;
-        
-        // Create laser beam
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        const speed = 8;
-        state.cannonballs.push({
-          x: activeCannon.x,
-          y: activeCannon.y,
-          vx: (dx / distance) * speed,
-          vy: (dy / distance) * speed,
-          targetBagId: block.id,
-          life: 300,
-        });
-        
-        // Play cannon sound effect
-        playCannonSound(activeCannon.side === 'left');
-      }
-    }
+    // Check if bag is in cannon's destruction range and fire if needed
+    const state = animationStateRef.current;
+    checkAndFireCannon(block, state.leftCannon, state.cannonballs, canvas.height, playCannonSound);
 
     // Check if hit by cannonball
-    const state = animationStateRef.current;
     for (let i = 0; i < state.cannonballs.length; i++) {
       const ball = state.cannonballs[i];
       if (ball.targetBagId === block.id) {
@@ -615,7 +571,7 @@ export function LiquidationCanvas({
     }
 
     return block.y < canvas.height + block.height;
-  }, [createParticle, playCannonSound]);
+  }, [createParticle, playCannonSound, createClickParticle]);
 
   // Update particle
   const updateParticle = useCallback((particle: Particle, deltaTime: number): boolean => {
@@ -627,88 +583,6 @@ export function LiquidationCanvas({
     particle.size *= Math.pow(0.98, frameMultiplier);
     
     return particle.life > 0;
-  }, []);
-
-  // Update cannon (only left one)
-  const updateCannons = useCallback((canvasWidth: number, canvasHeight: number, deltaTime: number): void => {
-    const state = animationStateRef.current;
-    
-    // Set dynamic max position near mute button (leave 100px space for button)
-    const dynamicMaxX = canvasWidth - 120;
-    if (state.leftCannon.maxX === 0) {
-      state.leftCannon.maxX = dynamicMaxX;
-    }
-    
-    // Move cannon horizontally along bottom border
-    const frameMultiplier = deltaTime / 16.67;
-    const speed = state.leftCannon.speed || 1.0;
-    
-    let movementDirection = 0;
-    if (state.leftCannon.movingRight) {
-      state.leftCannon.x += speed * frameMultiplier;
-      movementDirection = 1;
-      if (state.leftCannon.x >= dynamicMaxX) {
-        state.leftCannon.movingRight = false;
-      }
-    } else {
-      state.leftCannon.x -= speed * frameMultiplier;
-      movementDirection = -1;
-      if (state.leftCannon.x <= (state.leftCannon.minX || 30)) {
-        state.leftCannon.movingRight = true;
-      }
-    }
-    
-    // Rotate wheels based on movement direction (realistic wheel rotation)
-    const wheelRadius = 15;
-    const distancePerFrame = speed * frameMultiplier;
-    const rotationPerFrame = (distancePerFrame / wheelRadius) * movementDirection;
-    state.leftCannon.wheelRotation = (state.leftCannon.wheelRotation || 0) + rotationPerFrame;
-    
-    // Position cannon slightly raised from bottom
-    state.leftCannon.y = canvasHeight - 50;
-    
-    // Update firing animation for left cannon only
-    if (state.leftCannon.isFiring) {
-      state.leftCannon.fireProgress += deltaTime * 0.02;
-      
-      if (state.leftCannon.fireProgress >= 1) {
-        state.leftCannon.isFiring = false;
-        state.leftCannon.fireProgress = 0;
-        state.leftCannon.targetBag = null;
-      }
-    }
-  }, []);
-
-  // Create cannonball
-  const createCannonball = useCallback((cannon: Cannon, targetX: number, targetY: number, bagId: string): Cannonball => {
-    const dx = targetX - cannon.x;
-    const dy = targetY - cannon.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const speed = 8;
-    
-    return {
-      x: cannon.x,
-      y: cannon.y,
-      vx: (dx / distance) * speed,
-      vy: (dy / distance) * speed,
-      targetBagId: bagId,
-      life: 300, // 5 seconds at 60fps
-    };
-  }, []);
-
-
-
-  // Update cannonballs
-  const updateCannonballs = useCallback((deltaTime: number): void => {
-    const state = animationStateRef.current;
-    
-    state.cannonballs = state.cannonballs.filter(ball => {
-      ball.x += ball.vx;
-      ball.y += ball.vy;
-      ball.life -= deltaTime;
-      
-      return ball.life > 0;
-    });
   }, []);
 
   // Draw money bag without dollar sign for better readability
@@ -885,201 +759,6 @@ export function LiquidationCanvas({
       }
     }
     
-    ctx.restore();
-  }, []);
-
-  // Draw cannon in historical 17-18 century style
-  const drawCannon = useCallback((ctx: CanvasRenderingContext2D, cannon: Cannon) => {
-    ctx.save();
-    ctx.translate(cannon.x, cannon.y);
-    
-    // Base cyber carriage platform 
-    const cybertechGradient = ctx.createLinearGradient(0, 10, 0, 35);
-    cybertechGradient.addColorStop(0, '#2A2A3A');
-    cybertechGradient.addColorStop(0.5, '#3A3A4A');
-    cybertechGradient.addColorStop(1, '#1A1A2A');
-    
-    ctx.fillStyle = cybertechGradient;
-    ctx.fillRect(-35, 10, 70, 25);
-    
-    // Tech panel lines
-    ctx.strokeStyle = '#4A4A5A';
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.6;
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.moveTo(-30, 15 + i * 5);
-      ctx.lineTo(30, 15 + i * 5);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
-    
-    // Large cyber wheels
-    const wheelGradient = ctx.createRadialGradient(0, 0, 5, 0, 0, 15);
-    wheelGradient.addColorStop(0, '#3A3A4A');
-    wheelGradient.addColorStop(1, '#1A1A2A');
-    
-    // Left wheel
-    ctx.fillStyle = wheelGradient;
-    ctx.beginPath();
-    ctx.arc(-25, 35, 15, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Right wheel  
-    ctx.beginPath();
-    ctx.arc(25, 35, 15, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Wheel spokes (8 spokes each) - with rotation
-    ctx.strokeStyle = '#5A5A6A';
-    ctx.lineWidth = 2;
-    const wheelRotation = cannon.wheelRotation || 0;
-    
-    for (let wheel of [-25, 25]) {
-      ctx.save();
-      ctx.translate(wheel, 35);
-      ctx.rotate(wheelRotation);
-      
-      for (let i = 0; i < 8; i++) {
-        const angle = (i * Math.PI) / 4;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(angle) * 12, Math.sin(angle) * 12);
-        ctx.stroke();
-      }
-      
-      ctx.restore();
-      
-      // Hub
-      ctx.fillStyle = '#5A5A6A';
-      ctx.beginPath();
-      ctx.arc(wheel, 35, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    
-    // Cannon trunnions (side mounting points)
-    ctx.fillStyle = '#6A6A7A';
-    ctx.beginPath();
-    ctx.arc(0, 5, 3, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Barrel rotation based on firing state
-    let barrelAngle = cannon.isFiring ? cannon.angle : 0;
-    
-    ctx.save();
-    ctx.rotate(barrelAngle);
-    
-    // Main cannon barrel (cyber-tech styling)
-    const barrelGradient = ctx.createLinearGradient(0, -10, 0, 10);
-    barrelGradient.addColorStop(0, '#4A4A5A');
-    barrelGradient.addColorStop(0.3, '#3A3A4A');
-    barrelGradient.addColorStop(0.7, '#2A2A3A');
-    barrelGradient.addColorStop(1, '#1A1A2A');
-    
-    ctx.fillStyle = barrelGradient;
-    
-    // Tapered barrel shape (wider at breech, narrower at muzzle)
-    ctx.beginPath();
-    ctx.moveTo(-5, -10);
-    ctx.lineTo(45, -7);
-    ctx.lineTo(50, -6);
-    ctx.lineTo(50, 6);
-    ctx.lineTo(45, 7);
-    ctx.lineTo(-5, 10);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Reinforcement bands (cyber-tech style)
-    ctx.fillStyle = '#5A5A6A';
-    ctx.fillRect(5, -10, 4, 20);
-    ctx.fillRect(20, -9, 3, 18);
-    ctx.fillRect(35, -8, 3, 16);
-    
-    // Decorative moldings
-    ctx.strokeStyle = '#6A6A7A';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(45, -6);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, 8);
-    ctx.lineTo(45, 6);
-    ctx.stroke();
-    
-    // Muzzle end (darker, worn look)
-    ctx.fillStyle = '#2A2A3A';
-    ctx.fillRect(47, -6, 3, 12);
-    
-    // Touch hole for ignition
-    ctx.fillStyle = '#1A1A2A';
-    ctx.beginPath();
-    ctx.arc(-2, 0, 2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Muzzle flash when firing (orange/yellow period-appropriate flash)
-    if (cannon.isFiring && cannon.fireProgress < 0.4) {
-      const flashAlpha = (1 - cannon.fireProgress * 2.5);
-      
-      // Outer flash
-      ctx.fillStyle = '#FFA500';
-      ctx.globalAlpha = flashAlpha * 0.6;
-      ctx.beginPath();
-      ctx.arc(55, 0, 20, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Middle flash
-      ctx.fillStyle = '#FF6347';
-      ctx.globalAlpha = flashAlpha * 0.8;
-      ctx.beginPath();
-      ctx.arc(53, 0, 12, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Core flash
-      ctx.fillStyle = '#FFFF00';
-      ctx.globalAlpha = flashAlpha;
-      ctx.beginPath();
-      ctx.arc(51, 0, 6, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.globalAlpha = 1;
-    }
-    
-    ctx.restore();
-    
-    ctx.restore();
-  }, []);
-
-  // Draw cannonball (historical iron ball)
-  const drawCannonball = useCallback((ctx: CanvasRenderingContext2D, ball: Cannonball) => {
-    ctx.save();
-    
-    // Iron cannonball with gradient for 3D effect
-    const ballGradient = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 0, ball.x, ball.y, 6);
-    ballGradient.addColorStop(0, '#8C7853');
-    ballGradient.addColorStop(0.4, '#6B5B73');
-    ballGradient.addColorStop(1, '#2F2F2F');
-    
-    ctx.fillStyle = ballGradient;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 6, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // Dark outline for definition
-    ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 6, 0, Math.PI * 2);
-    ctx.stroke();
-    
-    // Small highlight for metallic sheen
-    ctx.fillStyle = '#C0C0C0';
-    ctx.globalAlpha = 0.6;
-    ctx.beginPath();
-    ctx.arc(ball.x - 2, ball.y - 2, 2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.globalAlpha = 1;
     ctx.restore();
   }, []);
 
@@ -1388,7 +1067,8 @@ export function LiquidationCanvas({
       // Draw Bitcoin chart background (dimmed)
       drawBitcoinChart(ctx, canvas.width, canvas.height, chartOpacityRef.current);
 
-
+      // Get state once
+      const state = animationStateRef.current;
 
       // 🔥 ОПТИМИЗАЦИЯ: Лимит мешков на экране (предотвращение утечки памяти)
       if (state.liquidations.length > MAX_LIQUIDATIONS) {
@@ -1419,7 +1099,7 @@ export function LiquidationCanvas({
       });
 
       // Update and draw left cannon only
-      updateCannons(canvas.width, canvas.height, deltaTime);
+      updateCannons(state.leftCannon, canvas.width, canvas.height, deltaTime);
       drawCannon(ctx, state.leftCannon);
       
       // Cannon range calculation (invisible)
@@ -1427,7 +1107,7 @@ export function LiquidationCanvas({
       const bottomLimit = canvas.height * 0.95;
 
       // Update and draw cannonballs
-      updateCannonballs(deltaTime);
+      state.cannonballs = updateCannonballs(state.cannonballs, deltaTime);
       state.cannonballs.forEach(ball => {
         drawCannonball(ctx, ball);
       });

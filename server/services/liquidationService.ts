@@ -162,11 +162,12 @@ export class LiquidationService {
     // Поддержка двух форматов: WebSocket (data.s) и REST API (data.symbol)
     const symbol = data.s || data.symbol;
     
-    // Проверка: символ должен содержать только латиницу, цифры и заканчиваться на USDT, BUSD или USD
-    const isValidSymbol = /^[A-Z0-9]+(USDT|BUSD|USD)$/.test(symbol);
+    // 🔥 PHASE 3: Разрешаем все символы (включая Unicode: 币安人生USDT, KAITO и т.д.)
+    // Проверяем что символ заканчивается на USDT, BUSD, USD или USDC
+    const isValidSymbol = /(USDT|BUSD|USDC|USD)$/.test(symbol);
     
     if (!isValidSymbol) {
-      console.log(`Пропущен невалидный символ: ${symbol}`);
+      console.log(`Пропущен символ без стейблкоина: ${symbol}`);
       return null;
     }
     

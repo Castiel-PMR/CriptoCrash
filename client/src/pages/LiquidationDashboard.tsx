@@ -4,6 +4,7 @@ import { StatsHeader } from '../components/StatsHeader';
 import { LiveStatsPanel } from '../components/LiveStatsPanel';
 import { MarketSentiment } from '../components/MarketSentiment';
 import { SymbolSearch } from '../components/SymbolSearch';
+import { PerformanceHUD } from '../components/PerformanceHUD';
 import { useLiquidationData } from '../hooks/useLiquidationData';
 import { Pause, Play, Settings, RefreshCw } from 'lucide-react';
 
@@ -66,6 +67,11 @@ export default function LiquidationDashboard() {
             chartOpacity={chartOpacity}
             timeframe={timeframe}
             chartSymbol={chartSymbol}
+          />
+          
+          {/* ✅ Performance HUD - правый верхний угол */}
+          <PerformanceHUD 
+            wsConnected={isConnected}
           />
         </div>
         

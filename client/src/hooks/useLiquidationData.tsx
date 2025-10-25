@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Liquidation, MarketStats } from '@shared/schema';
 
 interface UseLiquidationDataReturn {
   liquidations: Liquidation[];
-  lastFiveLiquidations: Liquidation[]; // 🔥 НОВОЕ: Последние 5 ликвидаций (не стираются)
+  lastFiveLiquidations: Liquidation[];
   marketStats: MarketStats;
   isConnected: boolean;
   connectionError: string | null;
@@ -12,7 +12,6 @@ interface UseLiquidationDataReturn {
 
 export function useLiquidationData(): UseLiquidationDataReturn {
   const [liquidations, setLiquidations] = useState<Liquidation[]>([]);
-  // 🔥 НОВОЕ: Отдельное хранилище для последних 5 ликвидаций (не стираются)
   const [lastFiveLiquidations, setLastFiveLiquidations] = useState<Liquidation[]>([]);
   const [marketStats, setMarketStats] = useState<MarketStats>({
     totalLongs: 0,
@@ -23,40 +22,52 @@ export function useLiquidationData(): UseLiquidationDataReturn {
   });
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  
+  // ✅ Refs для правильной очистки
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const isMountedRef = useRef(true);
 
   const connect = useCallback(() => {
+    // Очищаем предыдущее соединение
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     try {
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
       const socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
-        console.log('Connected to liquidation feed');
+        if (!isMountedRef.current) return;
+        console.log('🔌 Connected to liquidation feed');
         setIsConnected(true);
         setConnectionError(null);
       };
 
       socket.onmessage = (event) => {
+        if (!isMountedRef.current) return;
+        
         try {
           const message = JSON.parse(event.data);
           
           switch (message.type) {
             case 'liquidation':
-              // Дополнительная валидация на клиенте
               const liquidation = message.data;
               if (liquidation && liquidation.symbol && liquidation.value > 0) {
                 setLiquidations(prev => {
+                  // ✅ Ограничиваем 20 элементов (было 30)
                   const updated = [...prev, liquidation];
-                  // 🔥 ОПТИМИЗАЦИЯ: Храним только 30 последних (было 100)
-                  return updated.slice(-30);
+                  return updated.slice(-20);
                 });
                 
-                // 🔥 НОВОЕ: Обновляем последние 5 ликвидаций (только $50K+)
+                // Обновляем последние 5 ликвидаций ($50K+)
                 if (liquidation.value >= 50000) {
                   setLastFiveLiquidations(prev => {
                     const updated = [...prev, liquidation];
-                    return updated.slice(-5); // Всегда последние 5 крупных
+                    return updated.slice(-5);
                   });
                 }
               }
@@ -68,8 +79,8 @@ export function useLiquidationData(): UseLiquidationDataReturn {
               
             case 'recentLiquidations':
               const recentLiqs = message.data || [];
-              setLiquidations(recentLiqs);
-              // 🔥 НОВОЕ: Инициализируем последние 5 (только $50K+)
+              setLiquidations(recentLiqs.slice(-20));
+              
               if (recentLiqs.length > 0) {
                 const filtered50k = recentLiqs.filter((liq: Liquidation) => liq.value >= 50000);
                 setLastFiveLiquidations(filtered50k.slice(-5));
@@ -82,47 +93,84 @@ export function useLiquidationData(): UseLiquidationDataReturn {
       };
 
       socket.onclose = () => {
-        console.log('Disconnected from liquidation feed');
+        if (!isMountedRef.current) return;
+        
+        console.log('🔌 Disconnected, reconnecting...');
         setIsConnected(false);
-        // Attempt to reconnect after 3 seconds
-        setTimeout(connect, 3000);
+        
+        // ✅ Переподключение через 3 секунды
+        if (reconnectTimerRef.current) {
+          clearTimeout(reconnectTimerRef.current);
+        }
+        reconnectTimerRef.current = window.setTimeout(() => {
+          if (isMountedRef.current) {
+            connect();
+          }
+        }, 3000);
       };
 
       socket.onerror = (error) => {
+        if (!isMountedRef.current) return;
         console.error('WebSocket error:', error);
         setConnectionError('Connection error occurred');
         setIsConnected(false);
       };
 
-      setWs(socket);
+      wsRef.current = socket;
     } catch (error) {
       console.error('Failed to connect to WebSocket:', error);
       setConnectionError('Failed to establish connection');
-      setTimeout(connect, 5000);
+      
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+      }
+      reconnectTimerRef.current = window.setTimeout(() => {
+        if (isMountedRef.current) {
+          connect();
+        }
+      }, 5000);
     }
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     connect();
     
+    // ✅ ПРАВИЛЬНАЯ ОЧИСТКА при unmount
     return () => {
-      if (ws) {
-        ws.close();
+      isMountedRef.current = false;
+      
+      // Очищаем таймер переподключения
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      
+      // Закрываем WebSocket
+      if (wsRef.current) {
+        wsRef.current.onopen = null;
+        wsRef.current.onmessage = null;
+        wsRef.current.onerror = null;
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+        console.log('🔌 WebSocket cleaned up');
       }
     };
   }, [connect]);
 
   const reconnect = useCallback(() => {
-    if (ws) {
-      ws.close();
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
     setConnectionError(null);
     connect();
-  }, [ws, connect]);
+  }, [connect]);
 
   return {
     liquidations,
-    lastFiveLiquidations, // 🔥 НОВОЕ: Возвращаем последние 5
+    lastFiveLiquidations,
     marketStats,
     isConnected,
     connectionError,

@@ -58,6 +58,8 @@ export function CryptoChart({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [liquidations, setLiquidations] = useState<Liquidation[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
+  const [wsConnected, setWsConnected] = useState<boolean>(false);
+  const [totalLiquidationsReceived, setTotalLiquidationsReceived] = useState<number>(0);
 
   // Умное форматирование цены в зависимости от величины (как на Binance)
   const formatPrice = useCallback((price: number): string => {
@@ -95,6 +97,7 @@ export function CryptoChart({
 
       ws.onopen = () => {
         console.log('🔗 Connected to Binance liquidations');
+        setWsConnected(true);
       };
 
       ws.onmessage = (event) => {
@@ -124,6 +127,8 @@ export function CryptoChart({
                 return updated.slice(-20);
               });
 
+              setTotalLiquidationsReceived(prev => prev + 1);
+
               console.log(`💥 Liquidation: ${liquidation.side.toUpperCase()} $${liquidation.value.toFixed(2)} at $${liquidation.price}`);
             }
           }
@@ -134,10 +139,12 @@ export function CryptoChart({
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        setWsConnected(false);
       };
 
       ws.onclose = () => {
         console.log('Disconnected from liquidations, reconnecting...');
+        setWsConnected(false);
         setTimeout(connectToLiquidations, 5000);
       };
     };
@@ -147,9 +154,16 @@ export function CryptoChart({
     return () => {
       if (wsRef.current) {
         wsRef.current.close();
+        setWsConnected(false);
       }
     };
   }, [showLiquidations, symbol, minLiquidationValue]);
+
+  // Сброс счетчика при смене монеты
+  useEffect(() => {
+    setTotalLiquidationsReceived(0);
+    setLiquidations([]);
+  }, [symbol]);
 
   // Fetch данных с Binance API
   useEffect(() => {
@@ -474,6 +488,44 @@ export function CryptoChart({
         height={canvasSize.height}
         style={{ outline: 'none' }}
       />
+      
+      {/* Индикатор ликвидаций */}
+      {showLiquidations && (
+        <div style={{
+          position: 'absolute',
+          top: 10,
+          left: 10,
+          background: 'rgba(0, 0, 0, 0.8)',
+          padding: '8px 12px',
+          borderRadius: 6,
+          fontSize: 11,
+          fontFamily: 'JetBrains Mono, monospace',
+          color: '#eaeaea',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: wsConnected ? '#00ff88' : '#ff4444',
+              boxShadow: wsConnected ? '0 0 8px #00ff88' : '0 0 8px #ff4444',
+            }} />
+            <span style={{ opacity: 0.8 }}>
+              {wsConnected ? 'Connected' : 'Disconnected'}
+            </span>
+          </div>
+          <div style={{ opacity: 0.7, fontSize: 10 }}>
+            Tracking: <span style={{ color: '#00ff88', fontWeight: 'bold' }}>{symbol}</span>
+          </div>
+          <div style={{ opacity: 0.7, fontSize: 10 }}>
+            Min: <span style={{ color: '#ffd700' }}>${minLiquidationValue >= 1000 ? (minLiquidationValue / 1000).toFixed(0) + 'K' : minLiquidationValue}</span>
+          </div>
+          <div style={{ opacity: 0.7, fontSize: 10, marginTop: 4 }}>
+            Received: <span style={{ color: '#ff6666' }}>{totalLiquidationsReceived}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

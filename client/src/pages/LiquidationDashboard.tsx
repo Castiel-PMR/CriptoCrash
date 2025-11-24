@@ -13,6 +13,7 @@ export default function LiquidationDashboard() {
   const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
   const [timeframe, setTimeframe] = useState('1m'); // Default 1-minute timeframe
   const [chartSymbol, setChartSymbol] = useState('BTCUSDT'); // 🔥 НОВОЕ: Выбранный символ для графика
+  const [filterBySymbol, setFilterBySymbol] = useState(false); // 🔥 НОВОЕ: Фильтровать ликвидации по символу графика
 
   const [chartOpacity, setChartOpacity] = useState(100); // Opacity in percentage
   
@@ -25,8 +26,12 @@ export default function LiquidationDashboard() {
     reconnect 
   } = useLiquidationData();
 
-  // Filter liquidations based on minimum amount
-  const filteredLiquidations = liquidations.filter(liq => liq.value >= minLiquidationAmount);
+  // Filter liquidations based on minimum amount AND symbol (if enabled)
+  const filteredLiquidations = liquidations.filter(liq => {
+    const meetsMinAmount = liq.value >= minLiquidationAmount;
+    const meetsSymbolFilter = !filterBySymbol || liq.symbol === chartSymbol;
+    return meetsMinAmount && meetsSymbolFilter;
+  });
 
   const handleTogglePause = () => {
     setIsPaused(!isPaused);
@@ -79,6 +84,20 @@ export default function LiquidationDashboard() {
           <div className="bg-cyber-dark/50 rounded-lg border border-cyber-border p-4">
             <h3 className="text-lg font-semibold mb-3 text-accent-yellow">Liquidation Filter</h3>
             <div className="space-y-3">
+              {/* 🔥 НОВОЕ: Чекбокс фильтра по монете */}
+              <div className="flex items-center space-x-2 pb-2 border-b border-cyber-border">
+                <input
+                  type="checkbox"
+                  id="filterBySymbol"
+                  checked={filterBySymbol}
+                  onChange={(e) => setFilterBySymbol(e.target.checked)}
+                  className="w-4 h-4 text-accent-blue bg-cyber-border border-gray-600 rounded focus:ring-accent-blue cursor-pointer"
+                />
+                <label htmlFor="filterBySymbol" className="text-sm text-gray-300 cursor-pointer">
+                  Track only <span className="text-accent-yellow font-semibold">{chartSymbol}</span>
+                </label>
+              </div>
+              
               <div>
                 <label className="block text-sm text-gray-400 mb-2">
                   Minimum Amount: ${minLiquidationAmount >= 1000000 
@@ -104,7 +123,12 @@ export default function LiquidationDashboard() {
               </div>
               
               <div className="text-xs text-gray-400">
-                Showing: {filteredLiquidations.length} of {liquidations.length} liquidations
+                Showing: <span className="text-accent-blue font-semibold">{filteredLiquidations.length}</span> of {liquidations.length} liquidations
+                {filterBySymbol && (
+                  <div className="text-accent-yellow mt-1">
+                    🎯 Tracking {chartSymbol} only
+                  </div>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-xs">
@@ -224,6 +248,20 @@ export default function LiquidationDashboard() {
                 </label>
               </div>
 
+              {/* 🔥 НОВОЕ: Чекбокс в настройках тоже */}
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="filterBySymbolSettings"
+                  checked={filterBySymbol}
+                  onChange={(e) => setFilterBySymbol(e.target.checked)}
+                  className="w-4 h-4 text-accent-blue bg-cyber-border border-gray-600 rounded focus:ring-accent-blue"
+                />
+                <label htmlFor="filterBySymbolSettings" className="text-sm text-gray-400">
+                  Track only {chartSymbol}
+                </label>
+              </div>
+
 
 
               <div>
@@ -246,7 +284,7 @@ export default function LiquidationDashboard() {
                   <p><strong>Connection Status:</strong> {isConnected ? 'Connected' : 'Disconnected'}</p>
                   <p><strong>Active Liquidations:</strong> {filteredLiquidations.length} / {liquidations.length}</p>
                   <p><strong>Total Volume:</strong> ${((marketStats.totalLongs + marketStats.totalShorts) / 1000000).toFixed(1)}M</p>
-                  <p><strong>Filter:</strong> Above ${minLiquidationAmount >= 1000000 
+                  <p><strong>Filter:</strong> {filterBySymbol ? chartSymbol + ' - ' : ''}Above ${minLiquidationAmount >= 1000000 
                     ? (minLiquidationAmount / 1000000).toFixed(1) + 'M' 
                     : minLiquidationAmount >= 1000 
                     ? (minLiquidationAmount / 1000).toFixed(0) + 'K'

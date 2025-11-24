@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LiquidationCanvas } from '../components/LiquidationCanvas';
 import { StatsHeader } from '../components/StatsHeader';
 import { LiveStatsPanel } from '../components/LiveStatsPanel';

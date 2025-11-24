@@ -33,6 +33,16 @@ export default function LiquidationDashboard() {
     return meetsMinAmount && meetsSymbolFilter;
   });
 
+  // 🔥 DEBUG: Логируем фильтрацию
+  useEffect(() => {
+    if (filterBySymbol) {
+      console.log(`🎯 Filter active for ${chartSymbol}:`);
+      console.log(`  Total liquidations: ${liquidations.length}`);
+      console.log(`  Filtered (${chartSymbol}): ${filteredLiquidations.length}`);
+      console.log(`  Recent symbols:`, [...new Set(liquidations.slice(-10).map(l => l.symbol))]);
+    }
+  }, [filterBySymbol, chartSymbol, liquidations, filteredLiquidations.length]);
+
   const handleTogglePause = () => {
     setIsPaused(!isPaused);
   };

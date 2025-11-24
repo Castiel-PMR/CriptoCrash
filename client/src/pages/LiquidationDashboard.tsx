@@ -10,7 +10,7 @@ import { Pause, Play, Settings, RefreshCw } from 'lucide-react';
 export default function LiquidationDashboard() {
   const [isPaused, setIsPaused] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [minLiquidationAmount, setMinLiquidationAmount] = useState(1000); // Default $1K minimum
+  const [minLiquidationAmount, setMinLiquidationAmount] = useState(1); // Default $1 minimum
   const [timeframe, setTimeframe] = useState('1m'); // Default 1-minute timeframe
   const [chartSymbol, setChartSymbol] = useState('BTCUSDT'); // 🔥 НОВОЕ: Выбранный символ для графика
   const [filterBySymbol, setFilterBySymbol] = useState(false); // 🔥 НОВОЕ: Фильтровать ликвидации по символу графика
@@ -109,15 +109,15 @@ export default function LiquidationDashboard() {
                 </label>
                 <input
                   type="range"
-                  min="1000"
+                  min="1"
                   max="1000000"
-                  step="1000"
+                  step="1"
                   value={minLiquidationAmount}
                   onChange={(e) => setMinLiquidationAmount(parseInt(e.target.value))}
                   className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>$1K</span>
+                  <span>$1</span>
                   <span>$1M</span>
                 </div>
               </div>
@@ -132,6 +132,36 @@ export default function LiquidationDashboard() {
               </div>
               
               <div className="grid grid-cols-2 gap-2 text-xs">
+                <button 
+                  onClick={() => setMinLiquidationAmount(1)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 1 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $1
+                </button>
+                <button 
+                  onClick={() => setMinLiquidationAmount(100)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 100 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $100
+                </button>
+                <button 
+                  onClick={() => setMinLiquidationAmount(1000)}
+                  className={`px-2 py-1 rounded text-center transition-colors ${
+                    minLiquidationAmount === 1000 
+                      ? 'bg-accent-blue text-white' 
+                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  $1K
+                </button>
                 <button 
                   onClick={() => setMinLiquidationAmount(10000)}
                   className={`px-2 py-1 rounded text-center transition-colors ${
@@ -161,16 +191,6 @@ export default function LiquidationDashboard() {
                   }`}
                 >
                   $100K
-                </button>
-                <button 
-                  onClick={() => setMinLiquidationAmount(1000000)}
-                  className={`px-2 py-1 rounded text-center transition-colors ${
-                    minLiquidationAmount === 1000000 
-                      ? 'bg-accent-blue text-white' 
-                      : 'bg-cyber-border text-gray-400 hover:bg-gray-700'
-                  }`}
-                >
-                  $1M
                 </button>
               </div>
             </div>
@@ -226,9 +246,9 @@ export default function LiquidationDashboard() {
                 </label>
                 <input
                   type="range"
-                  min="1000"
+                  min="1"
                   max="1000000"
-                  step="1000"
+                  step="1"
                   value={minLiquidationAmount}
                   onChange={(e) => setMinLiquidationAmount(parseInt(e.target.value))}
                   className="w-full h-2 bg-cyber-border rounded-lg appearance-none cursor-pointer slider"
